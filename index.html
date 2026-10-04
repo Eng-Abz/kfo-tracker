@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<style>html{-webkit-text-size-adjust:100%}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>KFO Launch Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sticky brand bar + tab strip; each tab is a scannable panel, summary before detail. KFO dark-green identity first, light variant second. */
+:root{
+  --bg:#0A1512; --surface:#11201A; --surface-2:#172A22; --line:rgba(246,242,232,.10); --line-strong:rgba(246,242,232,.18);
+  --fg:#F6F2E8; --body:#E8E4DA; --muted:#A8A093; --accent:#38A86B; --accent-deep:#0B7A53; --accent-ink:#0A1512;
+  --ok:#38A86B; --info:#5B9BD5; --warn:#D9A441; --crit:#E0654F; --idle:#8A8F86;
+  --ok-bg:rgba(56,168,107,.16); --info-bg:rgba(91,155,213,.16); --warn-bg:rgba(217,164,65,.16); --crit-bg:rgba(224,101,79,.16); --idle-bg:rgba(138,143,134,.16);
+  --font:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:10px; color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#EEF2EF; --surface:#FFFFFF; --surface-2:#F5F8F6; --line:rgba(15,31,24,.10); --line-strong:rgba(15,31,24,.18);
+  --fg:#0F1F18; --body:#23332B; --muted:#5E6B63; --accent:#0B7A53; --accent-deep:#0B7A53; --accent-ink:#FFFFFF;
+  --ok:#157A4A; --info:#2F6FAE; --warn:#9A6A10; --crit:#B93A26; --idle:#66706A;
+  --ok-bg:rgba(21,122,74,.12); --info-bg:rgba(47,111,174,.12); --warn-bg:rgba(154,106,16,.13); --crit-bg:rgba(185,58,38,.12); --idle-bg:rgba(102,112,106,.12);
+  color-scheme:light }}
+:root[data-theme="light"]{
+  --bg:#EEF2EF; --surface:#FFFFFF; --surface-2:#F5F8F6; --line:rgba(15,31,24,.10); --line-strong:rgba(15,31,24,.18);
+  --fg:#0F1F18; --body:#23332B; --muted:#5E6B63; --accent:#0B7A53; --accent-deep:#0B7A53; --accent-ink:#FFFFFF;
+  --ok:#157A4A; --info:#2F6FAE; --warn:#9A6A10; --crit:#B93A26; --idle:#66706A;
+  --ok-bg:rgba(21,122,74,.12); --info-bg:rgba(47,111,174,.12); --warn-bg:rgba(154,106,16,.13); --crit-bg:rgba(185,58,38,.12); --idle-bg:rgba(102,112,106,.12);
+  color-scheme:light }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--body);font-family:var(--font);font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+h1,h2,h3{color:var(--fg);margin:0;text-wrap:balance;font-weight:600}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px;letter-spacing:.02em}
+.muted{color:var(--muted)}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+[dir="rtl"] .eyebrow{letter-spacing:0;text-transform:none;font-size:12px}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:12px;padding-block:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-inline-end:auto;min-width:0}
+.mark{width:36px;height:36px;border-radius:9px;background:var(--accent-deep);display:grid;place-items:center;color:#F6F2E8;font-weight:700;font-size:17px;flex:none}
+.brand h1{font-size:17px;line-height:1.2}
+.brand .sub{font-size:12px;color:var(--muted)}
+.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--idle);display:inline-block}
+.sync.on i{background:var(--ok)} .sync.err i{background:var(--crit)}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 10px;cursor:pointer;font-size:12.5px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent-deep);color:#F6F2E8}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs a{padding:10px 12px 11px;color:var(--muted);text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;font-weight:500}
+.tabs a:hover{color:var(--fg)}
+.tabs a[aria-current="page"]{color:var(--fg);border-bottom-color:var(--accent)}
+.tabs .ct{font-size:11px;color:var(--muted);margin-inline-start:5px}
+
+/* generic */
+main{padding-top:22px;display:grid;gap:22px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.phead{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.phead h2{font-size:15px;margin-inline-end:auto}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:16px}
+.btn{background:var(--surface-2);border:1px solid var(--line-strong);border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:500;color:var(--fg)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--crit);border-color:var(--crit)}
+.btn.small{padding:3px 9px;font-size:12.5px}
+.btn:focus-visible,.tabs a:focus-visible,.seg button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.link:focus-visible,.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.link{background:none;border:0;padding:0;cursor:pointer;text-align:start;color:var(--fg);font-weight:500}
+.link:hover{color:var(--accent)}
+select.in,input.in,textarea.in{background:var(--surface-2);border:1px solid var(--line-strong);border-radius:8px;padding:6px 9px;width:100%}
+textarea.in{min-height:72px;resize:vertical}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap;background:var(--idle-bg);color:var(--idle)}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.info{background:var(--info-bg);color:var(--info)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.crit{background:var(--crit-bg);color:var(--crit)}
+.chip{display:inline-block;border:1px solid var(--line-strong);border-radius:6px;padding:0 7px;font-size:12px;color:var(--muted);white-space:nowrap}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line-strong);border-radius:var(--r)}
+.empty b{display:block;color:var(--fg);margin-bottom:4px}
+
+/* overview */
+.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr);gap:16px}
+@media (max-width:820px){.hero{grid-template-columns:1fr}}
+.next{background:var(--accent-deep);color:#F6F2E8;border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:6px;justify-content:space-between}
+.next .eyebrow{color:rgba(246,242,232,.72)}
+.next .days{font-size:44px;font-weight:700;line-height:1;color:#F6F2E8}
+.next .days small{font-size:15px;font-weight:500;margin-inline-start:6px}
+.next h3{color:#F6F2E8;font-size:17px}
+.next .when{font-size:13px;color:rgba(246,242,232,.8)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .v{font-size:26px;font-weight:700;color:var(--fg);line-height:1.1}
+.tile .v small{font-size:14px;color:var(--muted);font-weight:500}
+.tile .d{font-size:12.5px;color:var(--muted)}
+.meter{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.alist{list-style:none;margin:0;padding:0;display:grid}
+.alist li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
+.alist li:first-child{border-top:0}
+.alist .t{flex:1;min-width:0}
+.alist .m{font-size:12px;color:var(--muted)}
+.streams{display:grid;gap:10px}
+.srow{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:12px;align-items:center}
+.sbar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line);gap:2px}
+.sbar i{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend span::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--c)}
+.funnel{display:grid;gap:8px}
+.frow{display:grid;grid-template-columns:110px minmax(0,1fr) 28px;gap:10px;align-items:center}
+.fbar{height:14px;border-radius:0 4px 4px 0;background:var(--accent)}
+[dir="rtl"] .fbar{border-radius:4px 0 0 4px}
+
+/* tasks */
+.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fchip{background:none;border:1px solid var(--line-strong);border-radius:999px;padding:3px 11px;cursor:pointer;font-size:12.5px;color:var(--muted)}
+.fchip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tlist{display:grid}
+.trow{display:grid;grid-template-columns:136px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.trow:first-child{border-top:0}
+.trow .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.trow .note{font-size:12.5px;color:var(--muted);margin-top:2px}
+.trow.done .link{color:var(--muted);text-decoration:line-through}
+.due.late{color:var(--crit);font-weight:600}
+.prio{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--idle)}
+.prio.high{background:var(--crit)} .prio.med{background:var(--warn)}
+select.status{border-radius:999px;padding:2px 8px;font-size:12.5px;font-weight:500;border:1px solid transparent;background:var(--idle-bg);color:var(--idle);width:100%}
+select.status.ok{background:var(--ok-bg);color:var(--ok)} select.status.info{background:var(--info-bg);color:var(--info)}
+select.status.warn{background:var(--warn-bg);color:var(--warn)} select.status.crit{background:var(--crit-bg);color:var(--crit)}
+select.status option{background:var(--surface);color:var(--fg)}
+@media (max-width:640px){.trow{grid-template-columns:1fr;gap:6px}.trow .meta{justify-content:flex-start}.trow select.status{width:auto}}
+
+/* board */
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:10px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.col h3{font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:5px;cursor:pointer;text-align:start;width:100%}
+.card:hover{border-color:var(--accent)}
+.card .n{color:var(--fg);font-weight:600}
+.card .s{font-size:12px;color:var(--muted)}
+.card .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+/* tables */
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{padding:9px 10px;text-align:start;border-top:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600;border-top:0}
+td .link{white-space:normal}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl li{display:grid;grid-template-columns:96px 22px minmax(0,1fr) auto;gap:10px;padding:10px 0;align-items:start}
+.tl .dt{font-size:13px;color:var(--muted);text-align:end;padding-top:1px}
+.tl .dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--accent);background:var(--surface);margin:4px auto 0;position:relative}
+.tl .dot.done{background:var(--accent)}
+.tl .dot.gate{border-radius:2px;transform:rotate(45deg);width:11px;height:11px}
+.tl .dot.risk{border-color:var(--warn)} .tl .dot.miss{border-color:var(--crit)}
+.tl .rail{position:absolute;top:0;bottom:0;inset-inline-start:calc(96px + 10px + 10px);width:2px;background:var(--line)}
+.tl .today{grid-template-columns:96px 22px 1fr;padding:2px 0}
+.tl .today .dt{color:var(--accent);font-weight:600}
+.tl .today hr{border:0;border-top:2px dashed var(--accent);margin:10px 0 0}
+.tl .today .dot{border-color:var(--accent);background:var(--accent);width:8px;height:8px;margin-top:7px}
+@media (max-width:560px){.tl li{grid-template-columns:72px 18px minmax(0,1fr)}.tl li .aux{grid-column:3}.tl .rail{inset-inline-start:calc(72px + 10px + 8px)}.tl .today{grid-template-columns:72px 18px 1fr}}
+
+/* charts */
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;direction:ltr}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.chart .ax{fill:var(--muted);font-size:11px;font-family:var(--font)}
+.chart .tg{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 4}
+.chart .tgl{fill:var(--warn);font-size:11px;font-weight:600;font-family:var(--font)}
+.tip{position:absolute;pointer-events:none;background:var(--fg);color:var(--bg);border-radius:6px;padding:4px 8px;font-size:12px;white-space:nowrap;transform:translate(-50%,-110%);z-index:5}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px;z-index:50}
+.modal{background:var(--surface);border:1px solid var(--line-strong);border-radius:14px;width:min(560px,100%);max-height:calc(100% - 32px);overflow:auto;padding:18px}
+.modal h2{font-size:16px;margin-bottom:14px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .full{grid-column:1/-1}
+.form label{display:grid;gap:4px;font-size:12.5px;color:var(--muted);font-weight:500}
+@media (max-width:520px){.form{grid-template-columns:1fr}}
+.mfoot{display:flex;gap:8px;margin-top:16px;align-items:center}
+.mfoot .sp{margin-inline-end:auto}
+.toast{position:fixed;inset-inline-start:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:60}
+[dir="rtl"] .toast{transform:translateX(50%)}
+@media (prefers-reduced-motion:no-preference){.tile,.panel{transition:border-color .15s}}
+</style>
+</head>
+<body>
+
+
+<div class="top"><div class="wrap" style="padding-block:0">
+  <div class="bar">
+    <div class="brand"><div class="mark" aria-hidden="true">كـ</div><div><h1 id="h-title">KFO Launch Tracker</h1><div class="sub" id="h-sub"></div></div></div>
+    <span class="sync" id="sync"><i></i><span id="sync-t">Connecting…</span></span>
+    <button class="btn small" id="gh-settings" type="button">Data settings</button>
+    <div class="seg" role="group" aria-label="Language"><button id="lang-en" data-lang="en">EN</button><button id="lang-ar" data-lang="ar">عربي</button></div>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Sections"></nav>
+</div></div>
+<div class="wrap"><main id="main"></main></div>
+<div id="modal-root"></div>
+<div class="toast" id="toast" hidden></div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let lang="en"; try{lang=localStorage.getItem("kfo-lang")||"en"}catch(e){}
+let tab=(location.hash||"").replace("#","")||"overview";
+let fStream="all", fStatus="open", fSector="all";
+const S={tasks:[],partners:[],venues:[],milestones:[],kpis:[],targets:null,loaded:{},db:null,canWrite:true,status:"connecting"};
+
+/* ---------- words ---------- */
+const W={
+ title:["KFO Launch Tracker","متابعة إطلاق كفو"],
+ sub:["Kfo × Tawakkalna · launch to scale","كفو × توكلنا · من الإطلاق إلى التوسع"],
+ overview:["Overview","نظرة عامة"], tasks:["Workstreams","مسارات العمل"], pipeline:["Pipeline","الشركاء"], venues:["Venues","المتاجر"], milestones:["Milestones","المحطات"], kpis:["KPIs","المؤشرات"],
+ connecting:["Connecting…","جارٍ الاتصال…"], live:["Saved to GitHub","محفوظ في GitHub"], offline:["Can't reach GitHub","تعذّر الاتصال بـ GitHub"], saving:["Saving…","جارٍ الحفظ…"], setup:["Not connected","غير متصل"], settings:["Data settings","إعدادات البيانات"],
+ setupTitle:["Connect your data","اربط بياناتك"], setupIntro:["This tracker keeps its data in a JSON file inside your private GitHub repository. Enter the repository and an access token once; they stay in this browser only.","تحفظ هذه اللوحة بياناتها في ملف JSON داخل مستودعك الخاص على GitHub. أدخل المستودع ورمز الوصول مرة واحدة؛ يبقيان في هذا المتصفح فقط."],
+ g_owner:["GitHub username or organisation","اسم المستخدم أو المنظمة في GitHub"], g_repo:["Private data repository","مستودع البيانات الخاص"], g_branch:["Branch","الفرع"], g_path:["Data file","ملف البيانات"], g_token:["Access token","رمز الوصول"],
+ tokenHelp:["Use a fine-grained personal access token limited to the data repository, with Contents set to Read and write. Don't use it on a shared computer.","استخدم رمز وصول دقيق الصلاحيات مقتصراً على مستودع البيانات، مع صلاحية Contents للقراءة والكتابة. لا تستخدمه على جهاز مشترك."],
+ connect:["Connect","اتصال"], forget:["Forget token on this browser","حذف الرمز من هذا المتصفح"],
+ errToken:["GitHub rejected the token. Check that it hasn't expired and paste it again.","رفض GitHub الرمز. تأكد من صلاحيته وأعد لصقه."], errRepo:["Repository not found, or the token has no access to it. Check the names and the token's repository access.","المستودع غير موجود أو لا يملك الرمز صلاحية الوصول إليه. تحقق من الأسماء وصلاحيات الرمز."], errNet:["Couldn't reach GitHub. Check your connection and try again.","تعذّر الوصول إلى GitHub. تحقق من الاتصال وحاول مجدداً."],
+ nextUp:["Next milestone","المحطة القادمة"], days:["days","يوم"], today:["Today","اليوم"], dayOne:["day","يوم"],
+ tasksDone:["Tasks done","المهام المنجزة"], attention:["Needs attention","يحتاج انتباه"], partnersLive:["Merchants live","تجار فعّالون"], venuesActive:["Venues active","متاجر فعّالة"],
+ blockedOverdue:["blocked or overdue","متوقفة أو متأخرة"], ofTarget:["target","المستهدف"], signed:["signed","موقّع"], deactivated:["deactivated","معطّل"],
+ attentionList:["Needs attention","يحتاج انتباه"], upcoming:["Coming up","القادم"], streamProgress:["Progress by workstream","التقدم حسب المسار"], funnel:["Partner funnel","مسار الشركاء"],
+ allClear:["Nothing blocked or overdue.","لا توجد مهام متوقفة أو متأخرة."],
+ add:["Add","إضافة"], addTask:["Add task","إضافة مهمة"], addPartner:["Add partner","إضافة شريك"], addVenue:["Add venue","إضافة متجر"], addMilestone:["Add milestone","إضافة محطة"], addMonth:["Add month","إضافة شهر"], editTargets:["Edit targets","تعديل المستهدفات"],
+ all:["All","الكل"], open:["Open","مفتوحة"], allStatus:["All statuses","كل الحالات"], allSectors:["All sectors","كل القطاعات"],
+ save:["Save","حفظ"], cancel:["Cancel","إلغاء"], del:["Delete","حذف"], confirmDel:["Confirm delete","تأكيد الحذف"], edit:["Edit","تعديل"],
+ saved:["Saved","تم الحفظ"], deleted:["Deleted","تم الحذف"], saveFail:["Couldn't save. Check your connection and try again.","تعذّر الحفظ. تحقق من الاتصال وحاول مجدداً."],
+ readOnly:["View only — you can't edit this tracker.","عرض فقط — لا يمكنك التعديل."],
+ noTasks:["No tasks match this filter.","لا توجد مهام بهذا الفلتر."], noTasksAdd:["Add a task to start tracking a workstream.","أضف مهمة لبدء متابعة مسار العمل."],
+ emptyBoard:["No partners yet","لا يوجد شركاء بعد"], emptyBoardD:["Add the first partner to build the pipeline.","أضف أول شريك لبناء المسار."],
+ emptyVenues:["No venues yet","لا توجد متاجر بعد"], emptyVenuesD:["Add venues as they go live on the admin portal.","أضف المتاجر عند تفعيلها في بوابة الإدارة."],
+ emptyMs:["No milestones yet","لا توجد محطات بعد"], emptyMsD:["Add launch dates and governance gates.","أضف تواريخ الإطلاق وبوابات القرار."],
+ emptyKpi:["No monthly figures yet","لا توجد أرقام شهرية بعد"], emptyKpiD:["Add a month with MAU and redemptions to see the trend against target.","أضف شهراً بعدد المستخدمين النشطين وعمليات الاسترداد لمتابعة الاتجاه مقابل المستهدف."],
+ loading:["Loading…","جارٍ التحميل…"],
+ mauLatest:["Monthly active users","المستخدمون النشطون شهرياً"], redLatest:["Redemptions / month","عمليات الاسترداد / شهر"], latest:["latest","آخر شهر"],
+ mauTrend:["Monthly active users","المستخدمون النشطون شهرياً"], redTrend:["Redemptions per month","عمليات الاسترداد شهرياً"], monthly:["Monthly figures","الأرقام الشهرية"],
+ targetPrefix:["Target","المستهدف"], autoNote:["Counted from Pipeline (stage = Live)","محسوب من الشركاء (المرحلة = فعّال)"], autoVenue:["Counted from Venues","محسوب من المتاجر"],
+ withDiscount:["with discount","بخصم"], withExplore:["with Explore offer","بعرض استكشاف"], total:["total","الإجمالي"],
+ away:["in","بعد"], ago:["ago","مضى"], gate:["Gate","بوابة قرار"],
+ editTask:["Edit task","تعديل المهمة"], newTask:["New task","مهمة جديدة"], editPartner:["Edit partner","تعديل الشريك"], newPartner:["New partner","شريك جديد"],
+ editVenue:["Edit venue","تعديل المتجر"], newVenue:["New venue","متجر جديد"], editMilestone:["Edit milestone","تعديل المحطة"], newMilestone:["New milestone","محطة جديدة"],
+ editMonth:["Edit month","تعديل الشهر"], newMonth:["New month","شهر جديد"], targetsT:["Targets","المستهدفات"],
+ f_title:["Title (English)","العنوان (إنجليزي)"], f_title_ar:["Title (Arabic)","العنوان (عربي)"], f_stream:["Workstream","المسار"], f_status:["Status","الحالة"], f_priority:["Priority","الأولوية"],
+ f_owner:["Owner","المسؤول"], f_due:["Due","الاستحقاق"], f_note:["Notes","ملاحظات"], f_name:["Name","الاسم"], f_sector:["Sector","القطاع"], f_stage:["Stage","المرحلة"], f_tier:["Tier","الفئة"],
+ f_contact:["Contact","جهة التواصل"], f_next:["Next step","الخطوة التالية"], f_ref:["Portal ref","مرجع البوابة"], f_venue_id:["Venue ID","معرّف المتجر"], f_type:["Type","النوع"], f_city:["City","المدينة"],
+ f_discount:["Discount set","الخصم مفعّل"], f_explore:["Explore offer","عرض استكشاف"], f_date:["Date","التاريخ"], f_kind:["Kind","النوع"], f_month:["Month","الشهر"],
+ f_mau:["MAU","المستخدمون النشطون"], f_redemptions:["Redemptions","عمليات الاسترداد"], f_label:["Target label","وصف المستهدف"], f_t_mau:["MAU target","مستهدف المستخدمين"],
+ f_t_red:["Redemptions / month target","مستهدف الاسترداد الشهري"], f_t_merch:["Merchants live target","مستهدف التجار"],
+ required:["Fill in the required field.","أكمل الحقل المطلوب."]
+};
+const t=k=>W[k]?W[k][lang==="ar"?1:0]:k;
+
+const O={
+ stream:{legal:["Legal","القانونية"],tawakkalna:["Tawakkalna","توكلنا"],portal:["Portal & venues","البوابة والمتاجر"],bd:["Business dev","تطوير الأعمال"],marketing:["Marketing & social","التسويق"],decks:["Decks","العروض"],finance:["Finance","المالية"]},
+ taskStatus:{todo:["To do","لم تبدأ"],doing:["In progress","قيد التنفيذ"],blocked:["Blocked","متوقفة"],done:["Done","منجزة"]},
+ priority:{high:["High","عالية"],med:["Medium","متوسطة"],low:["Low","منخفضة"]},
+ stage:{prospect:["Prospect","محتمل"],contacted:["Contacted","تم التواصل"],intro:["Intro","تعريف"],engaged:["Engaged","متفاعل"],negotiating:["Negotiating","تفاوض"],signed:["Signed","موقّع"],live:["Live","فعّال"]},
+ sector:{automotive:["Automotive","السيارات"],retail:["Retail & fashion","التجزئة والأزياء"],fnb:["Food & beverage","المطاعم والمقاهي"],grocery:["Grocery","البقالة"],telecom:["Telecom","الاتصالات"],travel:["Travel","السفر"],finance:["Finance & payments","المالية والمدفوعات"],hospitality:["Hospitality","الضيافة"],entertainment:["Entertainment","الترفيه"],ecommerce:["E-commerce","التجارة الإلكترونية"],beauty:["Beauty","التجميل"],other:["Other","أخرى"]},
+ tier:{tier1:["Tier 1","الفئة 1"],tier2:["Tier 2","الفئة 2"],tier3:["Tier 3","الفئة 3"],warm:["Warm contact","علاقة قائمة"],inbound:["Inbound","طلب وارد"]},
+ vtype:{Restaurant:["Restaurant","مطعم"],Cafe:["Cafe","مقهى"],Shop:["Shop","متجر"],Hotel:["Hotel","فندق"],Beauty:["Beauty","تجميل"],Attraction:["Attraction","وجهة"]},
+ vstatus:{active:["Active","فعّال"],deactivated:["Deactivated","معطّل"],draft:["Draft","مسودة"]},
+ yesno:{yes:["Yes","نعم"],no:["No","لا"]},
+ mkind:{milestone:["Milestone","محطة"],gate:["Gate","بوابة قرار"]},
+ mstatus:{planned:["Planned","مخطط"],done:["Done","تم"],at_risk:["At risk","معرّض للخطر"],missed:["Missed","فائت"]}
+};
+const ol=(g,v)=>O[g]&&O[g][v]?O[g][v][lang==="ar"?1:0]:(v||"—");
+const TONE={todo:"",doing:"info",blocked:"crit",done:"ok",planned:"",at_risk:"warn",missed:"crit",active:"ok",deactivated:"crit",draft:"",
+ prospect:"",contacted:"",intro:"info",engaged:"info",negotiating:"warn",signed:"ok",live:"ok",yes:"ok",no:""};
+const pill=(g,v)=>`<span class="pill ${TONE[v]||""}">${esc(ol(g,v))}</span>`;
+const loc=()=>lang==="ar"?"ar-u-ca-gregory-nu-latn":"en-GB";
+const nf=(n,c)=>n==null||n===""||isNaN(n)?"—":new Intl.NumberFormat(loc(),c?{notation:"compact",maximumFractionDigits:1}:{}).format(+n);
+const pd=s=>{if(!s)return null;const [y,m,d]=String(s).split("-").map(Number);return new Date(y,(m||1)-1,d||1)};
+const today=()=>{const d=new Date();d.setHours(0,0,0,0);return d};
+const df=(s,o)=>{const d=pd(s);return d?new Intl.DateTimeFormat(loc(),o||{day:"numeric",month:"short",year:"numeric"}).format(d):"—"};
+const dShort=s=>df(s,{day:"numeric",month:"short"});
+const daysTo=s=>{const d=pd(s);return d?Math.round((d-today())/864e5):null};
+const title=o=>lang==="ar"&&o.title_ar?o.title_ar:(o.title||o.title_ar||"");
+const isLate=x=>x.due&&x.status!=="done"&&daysTo(x.due)<0;
+const rel=n=>{if(n==null)return"";if(n===0)return t("today");const a=Math.abs(n);return lang==="ar"?(n>0?`بعد ${a} يوم`:`قبل ${a} يوم`):(n>0?`in ${a} d`:`${a} d ago`)};
+
+/* ---------- schemas ---------- */
+const F=(k,type,opt,full,req)=>({k,type,opt,full,req});
+const SCHEMA={
+ tasks:{n:["newTask","editTask"],f:[F("title","text",0,1,1),F("title_ar","text",0,1),F("stream","select","stream"),F("status","select","taskStatus"),F("priority","select","priority"),F("owner","text"),F("due","date"),F("note","textarea",0,1)],def:{status:"todo",priority:"med",stream:"bd"}},
+ partners:{n:["newPartner","editPartner"],f:[F("name","text",0,1,1),F("sector","select","sector"),F("stage","select","stage"),F("tier","select","tier"),F("contact","text"),F("next","text",0,1),F("due","date"),F("note","textarea",0,1)],def:{stage:"prospect",sector:"retail",tier:"tier2"}},
+ venues:{n:["newVenue","editVenue"],f:[F("name","text",0,1,1),F("ref","text"),F("venue_id","text"),F("type","select","vtype"),F("city","text"),F("status","select","vstatus"),F("discount","select","yesno"),F("explore","select","yesno"),F("note","textarea",0,1)],def:{type:"Shop",status:"active",discount:"no",explore:"no",city:"Riyadh"}},
+ milestones:{n:["newMilestone","editMilestone"],f:[F("title","text",0,1,1),F("title_ar","text",0,1),F("date","date",0,0,1),F("kind","select","mkind"),F("status","select","mstatus"),F("note","textarea",0,1)],def:{kind:"milestone",status:"planned"}},
+ kpis:{n:["newMonth","editMonth"],f:[F("month","month",0,1,1),F("mau","number"),F("redemptions","number"),F("note","textarea",0,1)],def:{}},
+ targets:{n:["targetsT","targetsT"],f:[F("label","text",0,1),F("mau","number"),F("redemptions","number"),F("merchants","number")],def:{}}
+};
+const LBL={title:"f_title",title_ar:"f_title_ar",stream:"f_stream",status:"f_status",priority:"f_priority",owner:"f_owner",due:"f_due",note:"f_note",name:"f_name",sector:"f_sector",stage:"f_stage",tier:"f_tier",contact:"f_contact",next:"f_next",ref:"f_ref",venue_id:"f_venue_id",type:"f_type",city:"f_city",discount:"f_discount",explore:"f_explore",date:"f_date",kind:"f_kind",month:"f_month",mau:"f_mau",redemptions:"f_redemptions",label:"f_label"};
+const TLBL={mau:"f_t_mau",redemptions:"f_t_red",merchants:"f_t_merch"};
+
+/* ---------- render ---------- */
+const TABS=["overview","tasks","pipeline","venues","milestones","kpis"];
+function counts(){return{tasks:S.tasks.filter(x=>x.status!=="done").length,pipeline:S.partners.length,venues:S.venues.length,milestones:S.milestones.filter(m=>m.status!=="done").length,kpis:S.kpis.length}}
+function renderChrome(){
+  document.documentElement.lang=lang; document.documentElement.dir=lang==="ar"?"rtl":"ltr";
+  $("#h-title").textContent=t("title"); $("#h-sub").textContent=t("sub");
+  $("#lang-en").setAttribute("aria-pressed",lang==="en"); $("#lang-ar").setAttribute("aria-pressed",lang==="ar");
+  const c=counts();
+  $("#tabs").innerHTML=TABS.map(k=>`<a href="#${k}" data-tab="${k}" ${tab===k?'aria-current="page"':""}>${t(k)}${c[k]!=null&&k!=="overview"?`<span class="ct num">${c[k]}</span>`:""}</a>`).join("");
+  const sy=$("#sync"); sy.className="sync"+(S.status==="live"?" on":S.status==="offline"?" err":"");
+  $("#sync-t").textContent=t({live:"live",offline:"offline",saving:"saving",setup:"setup"}[S.status]||"connecting");$("#gh-settings").textContent=t("settings");
+}
+function render(){renderChrome();const m=$("#main");if(S.status==="setup"){m.innerHTML=vSetup();return}const fn={overview:vOverview,tasks:vTasks,pipeline:vPipeline,venues:vVenues,milestones:vMilestones,kpis:vKpis}[tab]||vOverview;m.innerHTML=(S.canWrite?"":`<div class="empty">${t("readOnly")}</div>`)+fn()}
+const addBtn=(coll,key)=>S.canWrite?`<button class="btn primary small" data-new="${coll}">+ ${t(key)}</button>`:"";
+const loadingOr=(k,html)=>!S.loaded[k]&&S.status!=="offline"?`<div class="empty">${t("loading")}</div>`:html;
+const emptyBox=(a,b)=>`<div class="empty"><b>${t(a)}</b>${t(b)}</div>`;
+
+function vOverview(){
+  const ms=[...S.milestones].filter(m=>m.status!=="done"&&m.date&&daysTo(m.date)>=0).sort((a,b)=>a.date.localeCompare(b.date));
+  const nx=ms[0];
+  const done=S.tasks.filter(x=>x.status==="done").length, tot=S.tasks.length;
+  const att=S.tasks.filter(x=>x.status==="blocked"||isLate(x));
+  const live=S.partners.filter(p=>p.stage==="live").length, sig=S.partners.filter(p=>p.stage==="signed").length;
+  const tg=S.targets||{}; const mt=+tg.merchants||0;
+  const va=S.venues.filter(v=>v.status==="active").length, vd=S.venues.filter(v=>v.status==="deactivated").length;
+  const pct=(a,b)=>b?Math.min(100,Math.round(a/b*100)):0;
+  const nextHtml=nx?`<div class="next"><span class="eyebrow">${t("nextUp")}${nx.kind==="gate"?" · "+t("gate"):""}</span>
+     <div class="days num">${daysTo(nx.date)}<small>${t("days")}</small></div><h3>${esc(title(nx))}</h3><span class="when">${df(nx.date,{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</span></div>`
+     :`<div class="next"><span class="eyebrow">${t("nextUp")}</span><h3>—</h3></div>`;
+  const tiles=`<div class="tiles">
+    <div class="tile"><span class="eyebrow">${t("tasksDone")}</span><span class="v num">${done}<small> / ${tot}</small></span><div class="meter"><i style="width:${pct(done,tot)}%"></i></div></div>
+    <div class="tile"><span class="eyebrow">${t("attention")}</span><span class="v num" style="color:${att.length?"var(--crit)":"var(--fg)"}">${att.length}</span><span class="d">${t("blockedOverdue")}</span></div>
+    <div class="tile"><span class="eyebrow">${t("partnersLive")}</span><span class="v num">${live}${mt?`<small> / ${mt}</small>`:""}</span><span class="d">${sig} ${t("signed")}${mt?` · ${t("ofTarget")} ${nf(mt)}`:""}</span>${mt?`<div class="meter"><i style="width:${pct(live,mt)}%"></i></div>`:""}</div>
+    <div class="tile"><span class="eyebrow">${t("venuesActive")}</span><span class="v num">${va}<small> / ${S.venues.length}</small></span><span class="d" style="${vd?"color:var(--crit)":""}">${vd} ${t("deactivated")}</span></div>
+  </div>`;
+  const attList=att.length?`<ul class="alist">${att.sort((a,b)=>(a.due||"9").localeCompare(b.due||"9")).slice(0,8).map(x=>`<li>${pill("taskStatus",x.status)}<div class="t"><button class="link" data-edit="tasks" data-id="${esc(x.id)}">${esc(title(x))}</button><div class="m">${esc(ol("stream",x.stream))}${x.due?` · <span class="${isLate(x)?"due late":""}">${dShort(x.due)}</span>`:""}</div></div></li>`).join("")}</ul>`
+    :`<div class="empty">${t("allClear")}</div>`;
+  // also deactivated venues & at-risk milestones
+  const extra=[...S.venues.filter(v=>v.status==="deactivated").map(v=>`<li>${pill("vstatus","deactivated")}<div class="t"><button class="link" data-edit="venues" data-id="${esc(v.id)}">${esc(v.name)}</button><div class="m mono">${esc(v.ref||"")}</div></div></li>`),
+    ...S.milestones.filter(m=>m.status==="at_risk").map(m=>`<li>${pill("mstatus","at_risk")}<div class="t"><button class="link" data-edit="milestones" data-id="${esc(m.id)}">${esc(title(m))}</button><div class="m">${df(m.date)}</div></div></li>`)].join("");
+  const up=ms.slice(0,5).map(m=>`<li><span class="chip num">${dShort(m.date)}</span><div class="t"><button class="link" data-edit="milestones" data-id="${esc(m.id)}">${esc(title(m))}</button><div class="m">${m.kind==="gate"?t("gate")+" · ":""}${rel(daysTo(m.date))}</div></div>${pill("mstatus",m.status)}</li>`).join("");
+  const streams=Object.keys(O.stream).map(s=>{const xs=S.tasks.filter(x=>x.stream===s);if(!xs.length)return"";const n=k=>xs.filter(x=>x.status===k).length;const w=k=>n(k)/xs.length*100;
+    return `<div class="srow"><span>${esc(ol("stream",s))}</span><div class="sbar" title="${n("done")}/${xs.length}">${["done","doing","blocked","todo"].map(k=>n(k)?`<i style="width:${w(k)}%;background:var(--${{done:"ok",doing:"info",blocked:"crit",todo:"line-strong"}[k]})"></i>`:"").join("")}</div><span class="num muted">${n("done")}/${xs.length}</span></div>`}).join("");
+  const st=Object.keys(O.stage); const pc=st.map(s=>S.partners.filter(p=>p.stage===s).length); const pm=Math.max(1,...pc);
+  const funnel=st.map((s,i)=>`<div class="frow"><span>${esc(ol("stage",s))}</span><div><div class="fbar" style="width:${Math.max(pc[i]?4:0,pc[i]/pm*100)}%;${s==="live"||s==="signed"?"":"opacity:.55"}"></div></div><span class="num">${pc[i]}</span></div>`).join("");
+  return `<section class="hero">${nextHtml}${tiles}</section>
+  <section class="grid2">
+    <div class="panel"><div class="phead"><h2>${t("attentionList")}</h2></div>${loadingOr("tasks",attList)}${extra?`<ul class="alist" style="margin-top:4px;border-top:1px solid var(--line)">${extra}</ul>`:""}</div>
+    <div class="panel"><div class="phead"><h2>${t("upcoming")}</h2><a class="btn small" href="#milestones">${t("milestones")}</a></div>${loadingOr("milestones",up?`<ul class="alist">${up}</ul>`:emptyBox("emptyMs","emptyMsD"))}</div>
+  </section>
+  <section class="grid2">
+    <div class="panel"><div class="phead"><h2>${t("streamProgress")}</h2><a class="btn small" href="#tasks">${t("tasks")}</a></div>${loadingOr("tasks",streams?`<div class="streams">${streams}</div><div class="legend">${["done","doing","blocked","todo"].map(k=>`<span style="--c:var(--${{done:"ok",doing:"info",blocked:"crit",todo:"line-strong"}[k]})">${ol("taskStatus",k)}</span>`).join("")}</div>`:emptyBox("tasks","noTasksAdd"))}</div>
+    <div class="panel"><div class="phead"><h2>${t("funnel")}</h2><a class="btn small" href="#pipeline">${t("pipeline")}</a></div>${loadingOr("partners",S.partners.length?`<div class="funnel">${funnel}</div>`:emptyBox("emptyBoard","emptyBoardD"))}</div>
+  </section>`;
+}
+
+const SORD={blocked:0,doing:1,todo:2,done:3}, PORD={high:0,med:1,low:2};
+function vTasks(){
+  let xs=S.tasks.filter(x=>(fStream==="all"||x.stream===fStream)&&(fStatus==="all"||(fStatus==="open"?x.status!=="done":x.status===fStatus)));
+  xs.sort((a,b)=>(SORD[a.status]-SORD[b.status])||(PORD[a.priority]??1)-(PORD[b.priority]??1)||(a.due||"9").localeCompare(b.due||"9"));
+  const chips=`<div class="filters"><button class="fchip" data-fstream="all" aria-pressed="${fStream==="all"}">${t("all")}</button>${Object.keys(O.stream).map(s=>`<button class="fchip" data-fstream="${s}" aria-pressed="${fStream===s}">${esc(ol("stream",s))}</button>`).join("")}</div>`;
+  const stSel=`<select class="in" id="f-status-filter" style="width:auto" aria-label="${t("f_status")}"><option value="open" ${fStatus==="open"?"selected":""}>${t("open")}</option><option value="all" ${fStatus==="all"?"selected":""}>${t("allStatus")}</option>${Object.keys(O.taskStatus).map(k=>`<option value="${k}" ${fStatus===k?"selected":""}>${ol("taskStatus",k)}</option>`).join("")}</select>`;
+  const rows=xs.map(x=>`<div class="trow ${x.status==="done"?"done":""}">
+     ${S.canWrite?`<select class="status ${TONE[x.status]||""}" data-quick="tasks" data-id="${esc(x.id)}" data-field="status" aria-label="${t("f_status")}">${Object.keys(O.taskStatus).map(k=>`<option value="${k}" ${x.status===k?"selected":""}>${ol("taskStatus",k)}</option>`).join("")}</select>`:pill("taskStatus",x.status)}
+     <div style="min-width:0"><button class="link" data-edit="tasks" data-id="${esc(x.id)}">${esc(title(x))}</button>${x.note?`<div class="note">${esc(x.note)}</div>`:""}</div>
+     <div class="meta"><span class="prio ${x.priority||""}" title="${esc(ol("priority",x.priority))}"></span><span class="chip">${esc(ol("stream",x.stream))}</span>${x.owner?`<span class="muted">${esc(x.owner)}</span>`:""}${x.due?`<span class="num due ${isLate(x)?"late":""}">${dShort(x.due)}</span>`:""}</div>
+   </div>`).join("");
+  return `<div class="panel"><div class="phead"><h2>${t("tasks")}</h2>${stSel}${addBtn("tasks","addTask")}</div>${chips}<div class="tlist" style="margin-top:10px">${loadingOr("tasks",rows||`<div class="empty">${S.tasks.length?t("noTasks"):t("noTasksAdd")}</div>`)}</div></div>`;
+}
+
+function vPipeline(){
+  const ps=S.partners.filter(p=>fSector==="all"||p.sector===fSector);
+  const sel=`<select class="in" id="f-sector-filter" style="width:auto" aria-label="${t("f_sector")}"><option value="all">${t("allSectors")}</option>${Object.keys(O.sector).map(k=>`<option value="${k}" ${fSector===k?"selected":""}>${ol("sector",k)}</option>`).join("")}</select>`;
+  const cols=Object.keys(O.stage).map(s=>{const cs=ps.filter(p=>p.stage===s).sort((a,b)=>(a.tier||"").localeCompare(b.tier||"")||a.name.localeCompare(b.name));
+    return `<div class="col"><h3><span>${esc(ol("stage",s))}</span><span class="num muted">${cs.length}</span></h3>${cs.map(p=>`<button class="card" data-edit="partners" data-id="${esc(p.id)}"><span class="n">${esc(p.name)}</span><span class="row"><span class="chip">${esc(ol("sector",p.sector))}</span>${p.tier?`<span class="chip">${esc(ol("tier",p.tier))}</span>`:""}</span>${p.next?`<span class="s">→ ${esc(p.next)}</span>`:""}${p.due?`<span class="s num ${daysTo(p.due)<0&&p.stage!=="live"?"due late":""}">${dShort(p.due)}</span>`:""}</button>`).join("")}</div>`}).join("");
+  return `<div class="panel"><div class="phead"><h2>${t("pipeline")}</h2>${sel}${addBtn("partners","addPartner")}</div>${loadingOr("partners",S.partners.length?`<div class="board">${cols}</div>`:emptyBox("emptyBoard","emptyBoardD"))}</div>`;
+}
+
+function vVenues(){
+  const vs=[...S.venues].sort((a,b)=>(a.status==="deactivated"?-1:0)-(b.status==="deactivated"?-1:0)||(a.venue_id||"").localeCompare(b.venue_id||""));
+  const a=vs.filter(v=>v.status==="active").length, d=vs.filter(v=>v.discount==="yes").length, e=vs.filter(v=>v.explore==="yes").length;
+  const sum=`<div class="tiles" style="margin-bottom:14px">
+    <div class="tile"><span class="eyebrow">${t("venuesActive")}</span><span class="v num">${a}<small> / ${vs.length}</small></span></div>
+    <div class="tile"><span class="eyebrow">${t("f_discount")}</span><span class="v num">${d}<small> / ${vs.length}</small></span><div class="meter"><i style="width:${vs.length?d/vs.length*100:0}%"></i></div></div>
+    <div class="tile"><span class="eyebrow">${t("f_explore")}</span><span class="v num">${e}<small> / ${vs.length}</small></span><div class="meter"><i style="width:${vs.length?e/vs.length*100:0}%"></i></div></div></div>`;
+  const tbl=`<div class="tbl-wrap"><table><thead><tr><th>${t("f_name")}</th><th>${t("f_ref")}</th><th>${t("f_type")}</th><th>${t("f_city")}</th><th>${t("f_status")}</th><th>${t("f_discount")}</th><th>${t("f_explore")}</th></tr></thead><tbody>
+   ${vs.map(v=>`<tr><td><button class="link" data-edit="venues" data-id="${esc(v.id)}">${esc(v.name)}</button>${v.note?`<div class="muted" style="font-size:12px">${esc(v.note)}</div>`:""}</td><td class="mono">${esc(v.ref||"")}<div class="muted">${esc(v.venue_id||"")}</div></td><td>${esc(ol("vtype",v.type))}</td><td>${esc(v.city||"")}</td><td>${pill("vstatus",v.status)}</td><td>${pill("yesno",v.discount||"no")}</td><td>${pill("yesno",v.explore||"no")}</td></tr>`).join("")}
+  </tbody></table></div>`;
+  return `<div class="panel"><div class="phead"><h2>${t("venues")}</h2>${addBtn("venues","addVenue")}</div>${loadingOr("venues",vs.length?sum+tbl:emptyBox("emptyVenues","emptyVenuesD"))}</div>`;
+}
+
+function vMilestones(){
+  const ms=[...S.milestones].filter(m=>m.date).sort((a,b)=>a.date.localeCompare(b.date));
+  const td=today(); let placed=false; let out="";
+  const tdRow=`<li class="today"><span class="dt">${t("today")}</span><span class="dot" style="border-radius:50%"></span><hr></li>`;
+  ms.forEach(m=>{ if(!placed&&pd(m.date)>=td){out+=tdRow;placed=true}
+    const dcls=["dot",m.status==="done"?"done":"",m.kind==="gate"?"gate":"",m.status==="at_risk"?"risk":"",m.status==="missed"?"miss":""].join(" ");
+    out+=`<li><span class="dt num">${df(m.date)}</span><span class="${dcls}"></span><div style="min-width:0"><button class="link" data-edit="milestones" data-id="${esc(m.id)}">${esc(title(m))}</button>${m.note?`<div class="muted" style="font-size:12.5px">${esc(m.note)}</div>`:""}</div><div class="aux" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${m.kind==="gate"?`<span class="chip">${t("gate")}</span>`:""}${pill("mstatus",m.status)}<span class="muted num" style="font-size:12px">${m.status==="done"?"":rel(daysTo(m.date))}</span></div></li>`});
+  if(!placed&&ms.length)out+=tdRow;
+  return `<div class="panel"><div class="phead"><h2>${t("milestones")}</h2>${addBtn("milestones","addMilestone")}</div>${loadingOr("milestones",ms.length?`<ul class="tl"><span class="rail" aria-hidden="true"></span>${out}</ul>`:emptyBox("emptyMs","emptyMsD"))}</div>`;
+}
+
+function niceMax(v){if(v<=0)return 1;const p=Math.pow(10,Math.floor(Math.log10(v)));const n=v/p;return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p}
+function chart(rows,key,target,kind){
+  const W=640,H=220,L=48,R=16,T=18,B=28; const pts=rows.filter(r=>r[key]!=null&&r[key]!=="");
+  if(!pts.length)return `<div class="empty">${t("emptyKpi")}</div>`;
+  const mx=niceMax(Math.max(+target||0,...pts.map(r=>+r[key]))*1.08); const y=v=>T+(H-T-B)*(1-v/mx);
+  const n=rows.length, step=(W-L-R)/Math.max(1,n); const cx=i=>L+step*(i+.5);
+  let g=""; for(let i=0;i<=4;i++){const v=mx/4*i;g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-8}" y="${y(v)+4}" text-anchor="end">${nf(v,1)}</text>`}
+  const lab=rows.map((r,i)=>(n<=8||i%Math.ceil(n/8)===0)?`<text class="ax" x="${cx(i)}" y="${H-8}" text-anchor="middle">${esc(df(r.month+"-01",{month:"short",year:"2-digit"}))}</text>`:"").join("");
+  let marks="";
+  if(kind==="bar"){const bw=Math.min(38,step*.6);rows.forEach((r,i)=>{if(r[key]==null||r[key]==="")return;const v=+r[key],yy=y(v),h=Math.max(0,H-B-yy);marks+=`<path d="M${cx(i)-bw/2},${H-B} V${yy+Math.min(4,h)} Q${cx(i)-bw/2},${yy} ${cx(i)-bw/2+Math.min(4,h)},${yy} H${cx(i)+bw/2-Math.min(4,h)} Q${cx(i)+bw/2},${yy} ${cx(i)+bw/2},${yy+Math.min(4,h)} V${H-B} Z" fill="var(--accent)"/>`})}
+  else{const P=rows.map((r,i)=>r[key]==null||r[key]===""?null:[cx(i),y(+r[key])]).filter(Boolean);
+    marks=`<path d="M${P[0][0]},${H-B} ${P.map(p=>"L"+p[0]+","+p[1]).join(" ")} L${P[P.length-1][0]},${H-B} Z" fill="var(--accent)" opacity=".14"/><path d="M${P.map(p=>p[0]+","+p[1]).join(" L")}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`+P.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${i===P.length-1?5:3.5}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`).join("")}
+  const tg=+target?`<line class="tg" x1="${L}" x2="${W-R}" y1="${y(+target)}" y2="${y(+target)}"/><text class="tgl" x="${W-R}" y="${y(+target)-6}" text-anchor="end">${t("targetPrefix")} ${nf(target,1)}</text>`:"";
+  const hits=rows.map((r,i)=>`<rect x="${cx(i)-step/2}" y="${T}" width="${step}" height="${H-T-B}" fill="transparent" data-tip="${esc(df(r.month+"-01",{month:"long",year:"numeric"}))}: ${esc(nf(r[key]))}"/>`).join("");
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(key)}">${g}${tg}${marks}${lab}${hits}</svg></div>`;
+}
+function vKpis(){
+  const rows=[...S.kpis].sort((a,b)=>(a.month||"").localeCompare(b.month||""));
+  const last=rows[rows.length-1]||{}; const tg=S.targets||{};
+  const live=S.partners.filter(p=>p.stage==="live").length; const va=S.venues.filter(v=>v.status==="active").length;
+  const tile=(lbl,val,target,note)=>{const p=+target?Math.min(100,(+val||0)/+target*100):0;return `<div class="tile"><span class="eyebrow">${t(lbl)}</span><span class="v num">${nf(val)}${+target?`<small> / ${nf(target,1)}</small>`:""}</span><span class="d">${note}</span>${+target?`<div class="meter"><i style="width:${p}%"></i></div>`:""}</div>`};
+  const tiles=`<div class="tiles">${tile("mauLatest",last.mau,tg.mau,last.month?`${t("latest")}: ${df(last.month+"-01",{month:"long",year:"numeric"})}`:"—")}${tile("redLatest",last.redemptions,tg.redemptions,last.month?`${t("latest")}: ${df(last.month+"-01",{month:"long",year:"numeric"})}`:"—")}${tile("partnersLive",live,tg.merchants,t("autoNote"))}${tile("venuesActive",va,0,t("autoVenue"))}</div>`;
+  const head=`<div class="phead"><h2>${t("kpis")}</h2>${tg.label?`<span class="chip">${t("targetPrefix")}: ${esc(tg.label)}</span>`:""}${S.canWrite?`<button class="btn small" data-edit="targets" data-id="targets">${t("editTargets")}</button>`:""}${addBtn("kpis","addMonth")}</div>`;
+  const charts=rows.length?`<section class="grid2"><div class="panel"><div class="phead"><h2>${t("mauTrend")}</h2></div>${chart(rows,"mau",tg.mau,"line")}</div><div class="panel"><div class="phead"><h2>${t("redTrend")}</h2></div>${chart(rows,"redemptions",tg.redemptions,"bar")}</div></section>
+    <div class="panel"><div class="phead"><h2>${t("monthly")}</h2></div><div class="tbl-wrap"><table><thead><tr><th>${t("f_month")}</th><th>${t("f_mau")}</th><th>${t("f_redemptions")}</th><th>${t("f_note")}</th></tr></thead><tbody>${[...rows].reverse().map(r=>`<tr><td><button class="link" data-edit="kpis" data-id="${esc(r.id)}">${esc(df(r.month+"-01",{month:"long",year:"numeric"}))}</button></td><td class="num">${nf(r.mau)}</td><td class="num">${nf(r.redemptions)}</td><td class="muted">${esc(r.note||"")}</td></tr>`).join("")}</tbody></table></div></div>`
+    :emptyBox("emptyKpi","emptyKpiD");
+  return `<div class="panel">${head}${tiles}</div>${loadingOr("kpis",charts)}`;
+}
+
+/* ---------- modal ---------- */
+let editing=null, delArmed=false;
+function openEditor(coll,id){
+  const sc=SCHEMA[coll]; if(!sc)return;
+  const src=coll==="targets"?(S.targets||{}):id?(S[coll].find(x=>x.id===id)||{}):{...sc.def};
+  editing={coll,id,src}; delArmed=false;
+  const lab=f=>t(coll==="targets"&&TLBL[f.k]?TLBL[f.k]:LBL[f.k])+(f.req?" *":"");
+  const field=f=>{const v=src[f.k]??""; const id="f-"+f.k; const dis=S.canWrite?"":"disabled";
+    let inp; if(f.type==="select")inp=`<select class="in" id="${id}" ${dis}>${f.k!=="status"&&f.k!=="stage"?`<option value="">—</option>`:""}${Object.keys(O[f.opt]).map(k=>`<option value="${k}" ${v===k?"selected":""}>${esc(ol(f.opt,k))}</option>`).join("")}</select>`;
+    else if(f.type==="textarea")inp=`<textarea class="in" id="${id}" ${dis}>${esc(v)}</textarea>`;
+    else inp=`<input class="in" id="${id}" type="${f.type}" value="${esc(v)}" ${f.type==="number"?'min="0" step="1" inputmode="numeric"':""} ${f.k==="title_ar"?'dir="rtl"':""} ${coll==="kpis"&&f.k==="month"&&id&&editing.id?"readonly":""} ${dis}>`;
+    return `<label class="${f.full?"full":""}" for="${id}">${lab(f)}${inp}</label>`};
+  $("#modal-root").innerHTML=`<div class="scrim" data-close="1"><form class="modal" id="edit-form" role="dialog" aria-modal="true" aria-labelledby="m-title" novalidate>
+    <h2 id="m-title">${t(sc.n[id?1:0])}</h2><div class="form">${sc.f.map(field).join("")}</div>
+    <p class="muted" id="m-err" hidden style="color:var(--crit);margin:10px 0 0"></p>
+    <div class="mfoot"><span class="sp">${id&&coll!=="targets"&&S.canWrite?`<button type="button" class="btn danger small" id="m-del">${t("del")}</button>`:""}</span><button type="button" class="btn" data-close="1">${t("cancel")}</button>${S.canWrite?`<button type="submit" class="btn primary">${t("save")}</button>`:""}</div></form></div>`;
+  const first=$("#edit-form input,#edit-form select"); first&&first.focus();
+}
+function closeEditor(){$("#modal-root").innerHTML="";editing=null}
+function toast(m){const e=$("#toast");e.textContent=m;e.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>e.hidden=true,2200)}
+async function saveEditor(){
+  const {coll,id,src}=editing; const sc=SCHEMA[coll]; const data={};
+  for(const f of sc.f){let v=$("#f-"+f.k).value.trim(); if(f.req&&!v){const e=$("#m-err");e.textContent=t("required");e.hidden=false;$("#f-"+f.k).focus();return}
+    if(f.type==="number")v=v===""?null:Number(v); data[f.k]=v}
+  const body={...src,...data}; delete body.id; body.updated=new Date().toISOString();
+  try{
+    if(coll==="targets") await S.db.doc("settings/targets").set(body);
+    else if(coll==="kpis"){const mid=id||data.month; await S.db.doc("kpis/"+mid).set(body)}
+    else if(id) await S.db.doc(coll+"/"+id).set(body);
+    else { body.created=body.updated; await S.db.collection(coll).add(body) }
+    closeEditor(); toast(t("saved"));
+  }catch(e){const el=$("#m-err");el.textContent=t("saveFail");el.hidden=false;console.error(e)}
+}
+async function delEditor(){
+  const b=$("#m-del"); if(!delArmed){delArmed=true;b.textContent=t("confirmDel");b.classList.remove("small");return}
+  try{await S.db.doc(editing.coll+"/"+editing.id).delete();closeEditor();toast(t("deleted"))}catch(e){const el=$("#m-err");el.textContent=t("saveFail");el.hidden=false}
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click",e=>{
+  const el=e.target.closest("[data-lang],[data-new],[data-edit],[data-fstream],[data-close],#m-del,[data-tab]"); if(!el)return;
+  if(el.dataset.lang){lang=el.dataset.lang;try{localStorage.setItem("kfo-lang",lang)}catch(_){}render();return}
+  if(el.dataset.tab){return}
+  if(el.id==="m-del"){delEditor();return}
+  if(el.dataset.close){if(e.target===el||el.tagName==="BUTTON")closeEditor();return}
+  if(el.dataset.new){openEditor(el.dataset.new,null);return}
+  if(el.dataset.edit){openEditor(el.dataset.edit,el.dataset.id);return}
+  if(el.dataset.fstream){fStream=el.dataset.fstream;render();return}
+});
+document.addEventListener("change",async e=>{
+  const el=e.target;
+  if(el.id==="f-status-filter"){fStatus=el.value;render();return}
+  if(el.id==="f-sector-filter"){fSector=el.value;render();return}
+  if(el.dataset.quick&&S.db){try{await S.db.doc(el.dataset.quick+"/"+el.dataset.id).update({[el.dataset.field]:el.value,updated:new Date().toISOString()});toast(t("saved"))}catch(err){toast(t("saveFail"));render()}}
+});
+document.addEventListener("submit",e=>{if(e.target.id==="edit-form"){e.preventDefault();saveEditor()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&editing)closeEditor()});
+window.addEventListener("hashchange",()=>{const h=location.hash.replace("#","");if(TABS.includes(h)){tab=h;render();window.scrollTo(0,0)}});
+const tip=$("#tip");
+document.addEventListener("mouseover",e=>{const r=e.target.closest("[data-tip]");if(!r){tip.hidden=true;return}const b=r.getBoundingClientRect();tip.textContent=r.dataset.tip;tip.style.left=(b.left+b.width/2+scrollX)+"px";tip.style.top=(b.top+scrollY+12)+"px";tip.style.position="absolute";tip.hidden=false});
+
+/* ---------- data: a JSON file in a private GitHub repo ---------- */
+const CFGK="kfo-gh"; let cfg=null; try{cfg=JSON.parse(localStorage.getItem(CFGK)||"null")}catch(e){}
+const COLS=["tasks","partners","venues","milestones","kpis","settings"];
+const GH={data:null,sha:null,listeners:[],pending:[],busy:false,timer:null};
+const norm=d=>{d=d&&typeof d==="object"?d:{};COLS.forEach(c=>{if(!d[c]||typeof d[c]!=="object")d[c]={}});return d};
+const base=()=>`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`;
+const fileUrl=()=>base()+"/contents/"+cfg.path.split("/").map(encodeURIComponent).join("/");
+const hdr=()=>({Authorization:"Bearer "+cfg.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"});
+const dec=b=>new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\s/g,"")),c=>c.charCodeAt(0)));
+const enc=str=>{const u=new TextEncoder().encode(str);let o="";for(let k=0;k<u.length;k+=8192)o+=String.fromCharCode.apply(null,u.subarray(k,k+8192));return btoa(o)};
+const fail=(status)=>Object.assign(new Error("github "+status),{status});
+function setStatus(st){S.status=st;if(!editing)render();else renderChrome()}
+function emit(){GH.listeners.forEach(f=>f())}
+async function ghLoad(){
+  const r=await fetch(fileUrl()+"?ref="+encodeURIComponent(cfg.branch),{headers:hdr(),cache:"no-store"});
+  if(r.status===404){GH.data=norm({});GH.sha=null;return}
+  if(!r.ok)throw fail(r.status);
+  const j=await r.json(); GH.sha=j.sha; GH.data=norm(JSON.parse(dec(j.content||"")||"{}"));
+}
+function mutate(fn){
+  fn(GH.data); emit();
+  return new Promise((res,rej)=>{GH.pending.push({fn,res,rej});clearTimeout(GH.timer);GH.timer=setTimeout(flush,350)});
+}
+async function flush(){
+  if(GH.busy||!GH.pending.length)return; GH.busy=true; setStatus("saving");
+  const ops=GH.pending.splice(0); let ok=false;
+  try{
+    for(let a=0;a<3&&!ok;a++){
+      const body={message:"Update tracker data",content:enc(JSON.stringify(GH.data,null,1)),branch:cfg.branch}; if(GH.sha)body.sha=GH.sha;
+      const r=await fetch(fileUrl(),{method:"PUT",headers:{...hdr(),"Content-Type":"application/json"},body:JSON.stringify(body)});
+      if(r.ok){GH.sha=(await r.json()).content.sha;ok=true}
+      else if(r.status===409||r.status===422){await ghLoad();[...ops,...GH.pending].forEach(o=>o.fn(GH.data));emit()}
+      else throw fail(r.status);
+    }
+    if(!ok)throw fail(409);
+    ops.forEach(o=>o.res()); S.status="live";
+  }catch(e){
+    console.error(e); const all=[...ops,...GH.pending.splice(0)]; all.forEach(o=>o.rej(e));
+    try{await ghLoad();emit();S.status="live"}catch(_){S.status="offline"}
+    toast(t("saveFail"));
+  }
+  GH.busy=false; if(!editing)render();else renderChrome();
+  if(GH.pending.length)flush();
+}
+const db={
+  collection:c=>({
+    onSnapshot:f=>{GH.listeners.push(()=>f({docs:Object.entries(GH.data[c]||{}).map(([id,d])=>({id,data:()=>d}))}))},
+    add:d=>{const id="n"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);return mutate(D=>{D[c][id]=d})}
+  }),
+  doc:p=>{const [c,id]=p.split("/");return{
+    set:d=>mutate(D=>{(D[c]=D[c]||{})[id]=d}),
+    update:d=>mutate(D=>{if(D[c]&&D[c][id])D[c][id]={...D[c][id],...d}}),
+    delete:()=>mutate(D=>{if(D[c])delete D[c][id]}),
+    onSnapshot:f=>{GH.listeners.push(()=>{const d=(GH.data[c]||{})[id];f({exists:!!d,data:()=>d})})}
+  }}
+};
+S.db=db;
+["tasks","partners","venues","milestones","kpis"].forEach(c=>db.collection(c).onSnapshot(snap=>{S[c]=snap.docs.map(d=>({id:d.id,...d.data()}));S.loaded[c]=true}));
+db.doc("settings/targets").onSnapshot(x=>{S.targets=x.exists?x.data():null});
+GH.listeners.push(()=>{if(!editing)render();else renderChrome()});
+
+let setupErr="";
+function vSetup(){
+  const c=cfg||{}; const v=k=>esc(c[k]||"");
+  return `<form class="panel" id="gh-form" style="max-width:620px;margin-inline:auto" novalidate>
+    <div class="phead"><h2>${t("setupTitle")}</h2></div>
+    <p class="muted" style="margin:0 0 14px">${t("setupIntro")}</p>
+    <div class="form">
+      <label for="g-owner">${t("g_owner")}<input class="in" id="g-owner" value="${v("owner")}" autocomplete="off" dir="ltr" required></label>
+      <label for="g-repo">${t("g_repo")}<input class="in" id="g-repo" value="${v("repo")}" autocomplete="off" dir="ltr" required></label>
+      <label for="g-branch">${t("g_branch")}<input class="in" id="g-branch" value="${esc(c.branch||"main")}" autocomplete="off" dir="ltr"></label>
+      <label for="g-path">${t("g_path")}<input class="in" id="g-path" value="${esc(c.path||"data.json")}" autocomplete="off" dir="ltr"></label>
+      <label class="full" for="g-token">${t("g_token")}<input class="in" id="g-token" type="password" value="${v("token")}" autocomplete="off" dir="ltr" required></label>
+    </div>
+    <p class="muted" style="font-size:12.5px;margin:10px 0 0">${t("tokenHelp")}</p>
+    ${setupErr?`<p style="color:var(--crit);margin:10px 0 0">${esc(setupErr)}</p>`:""}
+    <div class="mfoot"><span class="sp">${cfg?`<button type="button" class="btn danger small" id="gh-forget">${t("forget")}</button>`:""}</span>${cfg&&GH.data?`<button type="button" class="btn" id="gh-back">${t("cancel")}</button>`:""}<button type="submit" class="btn primary">${t("connect")}</button></div>
+  </form>`;
+}
+async function connect(){
+  if(!cfg||!cfg.token){setStatus("setup");return}
+  setStatus("connecting");
+  try{
+    const r=await fetch(base(),{headers:hdr(),cache:"no-store"});
+    if(!r.ok)throw fail(r.status);
+    await ghLoad(); setupErr=""; S.status="live"; emit();
+  }catch(e){
+    console.error(e);
+    setupErr=t(e.status===401?"errToken":e.status===404||e.status===403?"errRepo":"errNet"); setStatus("setup");
+  }
+}
+document.addEventListener("submit",e=>{
+  if(e.target.id!=="gh-form")return; e.preventDefault();
+  const g=k=>$("#g-"+k).value.trim();
+  const n={owner:g("owner"),repo:g("repo"),branch:g("branch")||"main",path:(g("path")||"data.json").replace(/^\/+/,""),token:g("token")};
+  if(!n.owner||!n.repo||!n.token){setupErr=t("required");render();return}
+  cfg=n; try{localStorage.setItem(CFGK,JSON.stringify(cfg))}catch(_){}
+  connect();
+});
+document.addEventListener("click",e=>{
+  if(e.target.id==="gh-settings"){setupErr="";setStatus("setup")}
+  if(e.target.id==="gh-back"){setStatus("live")}
+  if(e.target.id==="gh-forget"){cfg=null;GH.data=null;GH.sha=null;COLS.forEach(c=>{if(c!=="settings")S[c]=[]});S.targets=null;S.loaded={};try{localStorage.removeItem(CFGK)}catch(_){}setupErr="";setStatus("setup")}
+});
+window.addEventListener("focus",async()=>{
+  if(S.status!=="live"||GH.busy||GH.pending.length||editing)return;
+  try{const old=GH.sha;await ghLoad();if(GH.sha!==old)emit()}catch(e){}
+});
+if(!TABS.includes(tab))tab="overview";
+render();
+connect();
+})();
+</script>
+
+</body>
+</html>
