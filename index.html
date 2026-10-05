@@ -96,7 +96,7 @@ textarea.in{min-height:72px;resize:vertical}
 .next .days small{font-size:15px;font-weight:500;margin-inline-start:6px}
 .next h3{color:#F6F2E8;font-size:17px}
 .next .when{font-size:13px;color:rgba(246,242,232,.8)}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,122px),1fr));gap:12px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .tile .v{font-size:26px;font-weight:700;color:var(--fg);line-height:1.1}
 .tile .v small{font-size:14px;color:var(--muted);font-weight:500}
@@ -192,6 +192,24 @@ td .link{white-space:normal}
 .mfoot .sp{margin-inline-end:auto}
 .toast{position:fixed;inset-inline-start:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:60}
 [dir="rtl"] .toast{transform:translateX(50%)}
+.lead{font-size:15.5px;color:var(--fg);margin:6px 0 0;max-width:60ch;line-height:1.6}
+.pday{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.pday .v{font-size:40px;font-weight:700;color:var(--fg);line-height:1}
+.pbar{position:relative;height:12px;border-radius:6px;background:var(--line);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--accent)}
+.pbar b{position:absolute;top:0;bottom:0;width:2px;background:var(--surface)}
+.pbar-l{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;font-size:12px;color:var(--muted)}
+.phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
+.phase{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.phase.now{border-color:var(--accent)}
+.phase .ph-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.phase h3{font-size:16px}
+.phase .btn{align-self:flex-start}
+.rrow{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.rrow:first-child{border-top:0}
+.rhy{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}
+.rhy div{border-inline-start:2px solid var(--accent);padding-inline-start:10px}
+.rhy b{display:block;color:var(--fg)}
 @media (prefers-reduced-motion:no-preference){.tile,.panel{transition:border-color .15s}}
 </style>
 </head>
@@ -219,14 +237,34 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let lang="en"; try{lang=localStorage.getItem("kfo-lang")||"en"}catch(e){}
 let tab=(location.hash||"").replace("#","")||"overview";
-let fStream="all", fStatus="open", fSector="all";
-const S={tasks:[],partners:[],venues:[],milestones:[],kpis:[],targets:null,loaded:{},db:null,canWrite:true,status:"connecting"};
+let fStream="all", fStatus="open", fSector="all", fPhase="all", fType="all";
+const S={tasks:[],partners:[],venues:[],milestones:[],kpis:[],risks:[],revmodels:[],plan:null,targets:null,loaded:{},db:null,canWrite:true,status:"connecting"};
 
 /* ---------- words ---------- */
 const W={
  title:["KFO Launch Tracker","متابعة إطلاق كفو"],
  sub:["Kfo × Tawakkalna · launch to scale","كفو × توكلنا · من الإطلاق إلى التوسع"],
- overview:["Overview","نظرة عامة"], tasks:["Workstreams","مسارات العمل"], pipeline:["Pipeline","الشركاء"], venues:["Venues","المتاجر"], milestones:["Milestones","المحطات"], kpis:["KPIs","المؤشرات"],
+ overview:["Overview","نظرة عامة"], plan:["90-day plan","خطة 90 يوم"],
+ vision:["Vision","رؤيتنا"], visionT:["For Kfo to be the Kingdom's first destination for offers, creating real value for people and merchants.","أن يكون كفو الوجهة الأولى للعروض في المملكة، ويخلق قيمة حقيقية للأفراد والتجار."],
+ goal:["Strategic goal","هدفنا الاستراتيجي"], goalT:["Build a standout offers experience inside the app that delivers real value to users and merchants and becomes a sustainable growth engine with scalable revenue.","بناء تجربة مميزة للعروض داخل التطبيق، تحقق قيمة حقيقية للمستخدمين والتجار، وتتحول إلى محرك نمو مستدام وإيرادات قابلة للتوسع."],
+ plan90:["From launch to proven growth and revenue","من الإطلاق إلى إثبات النمو والإيرادات"], editStart:["Change start date","تغيير تاريخ البداية"], now:["Current phase","المرحلة الحالية"], dayOf:["Day","اليوم"], of90:["of 90","من 90"],
+ p1t:["Phase 1: Fix the foundation","المرحلة 1: تثبيت الأساس"], p1s:["Deep understanding and fixing the basics","فهم عميق وإصلاح الأساس"],
+ p2t:["Phase 2: Prove growth","المرحلة 2: إثبات النمو"], p2s:["More real usage and repeat visits","زيادة الاستخدام والعودة"],
+ p3t:["Phase 3: Prove the economics","المرحلة 3: إثبات الاقتصاد"], p3s:["From value to revenue","من القيمة إلى الإيرادات"],
+ tasksDoneL:["tasks done","مهام منجزة"], otherTasks:["other tasks","مهام أخرى"], tracks:["Strategic tracks","المسارات الاستراتيجية"],
+ risks:["Risks and challenges","المخاوف والتحديات"], addRisk:["Add risk","إضافة تحدٍّ"], newRisk:["New risk","تحدٍّ جديد"], editRisk:["Edit risk","تعديل التحدي"],
+ revmodels:["Future revenue models","نماذج الإيرادات المستقبلية"], addModel:["Add model","إضافة نموذج"], newModel:["New revenue model","نموذج إيرادات جديد"], editModel:["Edit revenue model","تعديل نموذج الإيرادات"],
+ rhythm:["Operating rhythm","إيقاع العمل والاجتماعات"],
+ rh1:["Weekly executive meeting","اجتماع تنفيذي أسبوعي"], rh1d:["Review KPIs and take decisions","مراجعة مؤشرات الأداء واتخاذ القرارات"],
+ rh2:["Weekly team review","مراجعة فرق أسبوعية"], rh2d:["Initiative progress and unblocking","تقدم المبادرات وحل العوائق"],
+ rh3:["Monthly review","مراجعة شهرية"], rh3d:["Assess results and reset priorities","تقييم النتائج وتحديث الأولويات"],
+ rh4:["90-day evaluation","تقييم 90 يوم"], rh4d:["Full review and define the next phase","مراجعة شاملة وتحديد المرحلة التالية"],
+ planTile:["90-day plan","خطة 90 يوم"], allPhases:["All phases","كل المراحل"], noPhase:["No phase","بدون مرحلة"], allTypes:["All types","كل الأنواع"],
+ listings:["Listings active","الفروع الفعّالة"], cities:["Cities covered","المدن المغطاة"], online:["Online stores","متاجر إلكترونية"], byType:["Merchants by type","التجار حسب النوع"],
+ usersTotal:["Users","المستخدمون"], revenueL:["Revenue (SAR)","الإيرادات (ريال)"], usersTrend:["Users","المستخدمون"],
+ f_phase:["Plan phase","مرحلة الخطة"], f_track:["Strategic track","المسار الاستراتيجي"], f_initiative:["Plan initiative","مبادرة من الخطة"], f_name_ar:["Name (Arabic)","الاسم (عربي)"],
+ f_classification:["Classification","التصنيف"], f_vendor:["Channel","القناة"], f_cities:["Cities","المدن"], f_listings:["Listings","عدد الفروع"], f_active:["Active listings","الفروع الفعّالة"], f_created:["Added on","تاريخ الإضافة"],
+ f_users:["Total users","إجمالي المستخدمين"], f_dau:["DAU","النشطون يومياً"], f_return_rate:["Return rate %","معدل العودة %"], f_offers:["Offers published","العروض المنشورة"], f_conversion:["Conversion %","معدل التحويل %"], f_revenue:["Revenue (SAR)","الإيرادات (ريال)"], f_start:["Plan start date","تاريخ بداية الخطة"], tasks:["Workstreams","مسارات العمل"], pipeline:["Pipeline","الشركاء"], venues:["Merchants","التجار"], milestones:["Milestones","المحطات"], kpis:["KPIs","المؤشرات"],
  connecting:["Connecting…","جارٍ الاتصال…"], live:["Saved to GitHub","محفوظ في GitHub"], offline:["Can't reach GitHub","تعذّر الاتصال بـ GitHub"], saving:["Saving…","جارٍ الحفظ…"], setup:["Not connected","غير متصل"], settings:["Data settings","إعدادات البيانات"],
  setupTitle:["Connect your data","اربط بياناتك"], setupIntro:["This tracker keeps its data in a JSON file inside your private GitHub repository. Enter the repository and an access token once; they stay in this browser only.","تحفظ هذه اللوحة بياناتها في ملف JSON داخل مستودعك الخاص على GitHub. أدخل المستودع ورمز الوصول مرة واحدة؛ يبقيان في هذا المتصفح فقط."],
  g_owner:["GitHub username or organisation","اسم المستخدم أو المنظمة في GitHub"], g_repo:["Private data repository","مستودع البيانات الخاص"], g_branch:["Branch","الفرع"], g_path:["Data file","ملف البيانات"], g_token:["Access token","رمز الوصول"],
@@ -234,28 +272,28 @@ const W={
  connect:["Connect","اتصال"], forget:["Forget token on this browser","حذف الرمز من هذا المتصفح"],
  errToken:["GitHub rejected the token. Check that it hasn't expired and paste it again.","رفض GitHub الرمز. تأكد من صلاحيته وأعد لصقه."], errRepo:["Repository not found, or the token has no access to it. Check the names and the token's repository access.","المستودع غير موجود أو لا يملك الرمز صلاحية الوصول إليه. تحقق من الأسماء وصلاحيات الرمز."], errNet:["Couldn't reach GitHub. Check your connection and try again.","تعذّر الوصول إلى GitHub. تحقق من الاتصال وحاول مجدداً."],
  nextUp:["Next milestone","المحطة القادمة"], days:["days","يوم"], today:["Today","اليوم"], dayOne:["day","يوم"],
- tasksDone:["Tasks done","المهام المنجزة"], attention:["Needs attention","يحتاج انتباه"], partnersLive:["Merchants live","تجار فعّالون"], venuesActive:["Venues active","متاجر فعّالة"],
+ tasksDone:["Tasks done","المهام المنجزة"], attention:["Needs attention","يحتاج انتباه"], partnersLive:["Merchants live","تجار فعّالون"], venuesActive:["Listings active","الفروع الفعّالة"],
  blockedOverdue:["blocked or overdue","متوقفة أو متأخرة"], ofTarget:["target","المستهدف"], signed:["signed","موقّع"], deactivated:["deactivated","معطّل"],
  attentionList:["Needs attention","يحتاج انتباه"], upcoming:["Coming up","القادم"], streamProgress:["Progress by workstream","التقدم حسب المسار"], funnel:["Partner funnel","مسار الشركاء"],
  allClear:["Nothing blocked or overdue.","لا توجد مهام متوقفة أو متأخرة."],
- add:["Add","إضافة"], addTask:["Add task","إضافة مهمة"], addPartner:["Add partner","إضافة شريك"], addVenue:["Add venue","إضافة متجر"], addMilestone:["Add milestone","إضافة محطة"], addMonth:["Add month","إضافة شهر"], editTargets:["Edit targets","تعديل المستهدفات"],
+ add:["Add","إضافة"], addTask:["Add task","إضافة مهمة"], addPartner:["Add partner","إضافة شريك"], addVenue:["Add merchant","إضافة تاجر"], addMilestone:["Add milestone","إضافة محطة"], addMonth:["Add month","إضافة شهر"], editTargets:["Edit targets","تعديل المستهدفات"],
  all:["All","الكل"], open:["Open","مفتوحة"], allStatus:["All statuses","كل الحالات"], allSectors:["All sectors","كل القطاعات"],
  save:["Save","حفظ"], cancel:["Cancel","إلغاء"], del:["Delete","حذف"], confirmDel:["Confirm delete","تأكيد الحذف"], edit:["Edit","تعديل"],
  saved:["Saved","تم الحفظ"], deleted:["Deleted","تم الحذف"], saveFail:["Couldn't save. Check your connection and try again.","تعذّر الحفظ. تحقق من الاتصال وحاول مجدداً."],
  readOnly:["View only — you can't edit this tracker.","عرض فقط — لا يمكنك التعديل."],
  noTasks:["No tasks match this filter.","لا توجد مهام بهذا الفلتر."], noTasksAdd:["Add a task to start tracking a workstream.","أضف مهمة لبدء متابعة مسار العمل."],
  emptyBoard:["No partners yet","لا يوجد شركاء بعد"], emptyBoardD:["Add the first partner to build the pipeline.","أضف أول شريك لبناء المسار."],
- emptyVenues:["No venues yet","لا توجد متاجر بعد"], emptyVenuesD:["Add venues as they go live on the admin portal.","أضف المتاجر عند تفعيلها في بوابة الإدارة."],
+ emptyVenues:["No merchants yet","لا يوجد تجار بعد"], emptyVenuesD:["Add merchants as they go live on the admin portal.","أضف التجار عند تفعيلهم في بوابة الإدارة."],
  emptyMs:["No milestones yet","لا توجد محطات بعد"], emptyMsD:["Add launch dates and governance gates.","أضف تواريخ الإطلاق وبوابات القرار."],
  emptyKpi:["No monthly figures yet","لا توجد أرقام شهرية بعد"], emptyKpiD:["Add a month with MAU and redemptions to see the trend against target.","أضف شهراً بعدد المستخدمين النشطين وعمليات الاسترداد لمتابعة الاتجاه مقابل المستهدف."],
  loading:["Loading…","جارٍ التحميل…"],
  mauLatest:["Monthly active users","المستخدمون النشطون شهرياً"], redLatest:["Redemptions / month","عمليات الاسترداد / شهر"], latest:["latest","آخر شهر"],
  mauTrend:["Monthly active users","المستخدمون النشطون شهرياً"], redTrend:["Redemptions per month","عمليات الاسترداد شهرياً"], monthly:["Monthly figures","الأرقام الشهرية"],
- targetPrefix:["Target","المستهدف"], autoNote:["Counted from Pipeline (stage = Live)","محسوب من الشركاء (المرحلة = فعّال)"], autoVenue:["Counted from Venues","محسوب من المتاجر"],
+ targetPrefix:["Target","المستهدف"], autoNote:["Counted from the Merchants tab","محسوب من تبويب التجار"], autoVenue:["Counted from the Merchants tab","محسوب من تبويب التجار"],
  withDiscount:["with discount","بخصم"], withExplore:["with Explore offer","بعرض استكشاف"], total:["total","الإجمالي"],
  away:["in","بعد"], ago:["ago","مضى"], gate:["Gate","بوابة قرار"],
  editTask:["Edit task","تعديل المهمة"], newTask:["New task","مهمة جديدة"], editPartner:["Edit partner","تعديل الشريك"], newPartner:["New partner","شريك جديد"],
- editVenue:["Edit venue","تعديل المتجر"], newVenue:["New venue","متجر جديد"], editMilestone:["Edit milestone","تعديل المحطة"], newMilestone:["New milestone","محطة جديدة"],
+ editVenue:["Edit merchant","تعديل التاجر"], newVenue:["New merchant","تاجر جديد"], editMilestone:["Edit milestone","تعديل المحطة"], newMilestone:["New milestone","محطة جديدة"],
  editMonth:["Edit month","تعديل الشهر"], newMonth:["New month","شهر جديد"], targetsT:["Targets","المستهدفات"],
  f_title:["Title (English)","العنوان (إنجليزي)"], f_title_ar:["Title (Arabic)","العنوان (عربي)"], f_stream:["Workstream","المسار"], f_status:["Status","الحالة"], f_priority:["Priority","الأولوية"],
  f_owner:["Owner","المسؤول"], f_due:["Due","الاستحقاق"], f_note:["Notes","ملاحظات"], f_name:["Name","الاسم"], f_sector:["Sector","القطاع"], f_stage:["Stage","المرحلة"], f_tier:["Tier","الفئة"],
@@ -268,21 +306,25 @@ const W={
 const t=k=>W[k]?W[k][lang==="ar"?1:0]:k;
 
 const O={
- stream:{legal:["Legal","القانونية"],tawakkalna:["Tawakkalna","توكلنا"],portal:["Portal & venues","البوابة والمتاجر"],bd:["Business dev","تطوير الأعمال"],marketing:["Marketing & social","التسويق"],decks:["Decks","العروض"],finance:["Finance","المالية"]},
+ stream:{strategy:["Strategy office","الاستراتيجية"],product:["Product & tech","المنتج والتقنية"],portal:["Merchant ops","عمليات التجار"],bd:["Partnerships","الشراكات التجارية"],marketing:["Growth & marketing","النمو والتسويق"],finance:["Finance & revenue","المالية والإيرادات"],legal:["Legal","القانونية"],tawakkalna:["Tawakkalna","توكلنا"],decks:["Decks","العروض"]},
+ phase:{p1:["Phase 1 · Foundation","المرحلة 1 · الأساس"],p2:["Phase 2 · Growth","المرحلة 2 · النمو"],p3:["Phase 3 · Economics","المرحلة 3 · الاقتصاد"],later:["After 90 days","بعد 90 يوم"]},
+ track:{partners:["Build partners","بناء الشركاء"],users:["Engage customers","تحفيز العملاء"],value:["Create value","خلق قيمة"],revenue:["Generate revenue","تحقيق الإيرادات"]},
+ rstatus:{open:["Open","مفتوح"],mitigating:["Being handled","قيد المعالجة"],closed:["Closed","مغلق"]},
+ rmstatus:{idea:["Not started","لم يبدأ"],testing:["Testing","قيد التجربة"],earning:["Earning","يحقق إيراداً"]},
  taskStatus:{todo:["To do","لم تبدأ"],doing:["In progress","قيد التنفيذ"],blocked:["Blocked","متوقفة"],done:["Done","منجزة"]},
  priority:{high:["High","عالية"],med:["Medium","متوسطة"],low:["Low","منخفضة"]},
  stage:{prospect:["Prospect","محتمل"],contacted:["Contacted","تم التواصل"],intro:["Intro","تعريف"],engaged:["Engaged","متفاعل"],negotiating:["Negotiating","تفاوض"],signed:["Signed","موقّع"],live:["Live","فعّال"]},
  sector:{automotive:["Automotive","السيارات"],retail:["Retail & fashion","التجزئة والأزياء"],fnb:["Food & beverage","المطاعم والمقاهي"],grocery:["Grocery","البقالة"],telecom:["Telecom","الاتصالات"],travel:["Travel","السفر"],finance:["Finance & payments","المالية والمدفوعات"],hospitality:["Hospitality","الضيافة"],entertainment:["Entertainment","الترفيه"],ecommerce:["E-commerce","التجارة الإلكترونية"],beauty:["Beauty","التجميل"],other:["Other","أخرى"]},
  tier:{tier1:["Tier 1","الفئة 1"],tier2:["Tier 2","الفئة 2"],tier3:["Tier 3","الفئة 3"],warm:["Warm contact","علاقة قائمة"],inbound:["Inbound","طلب وارد"]},
  vtype:{Restaurant:["Restaurant","مطعم"],Cafe:["Cafe","مقهى"],Shop:["Shop","متجر"],Hotel:["Hotel","فندق"],Beauty:["Beauty","تجميل"],Attraction:["Attraction","وجهة"]},
- vstatus:{active:["Active","فعّال"],deactivated:["Deactivated","معطّل"],draft:["Draft","مسودة"]},
+ vstatus:{active:["Active","فعّال"],partial:["Partly active","فعّال جزئياً"],deactivated:["Deactivated","معطّل"],draft:["Draft","مسودة"]},
  yesno:{yes:["Yes","نعم"],no:["No","لا"]},
  mkind:{milestone:["Milestone","محطة"],gate:["Gate","بوابة قرار"]},
  mstatus:{planned:["Planned","مخطط"],done:["Done","تم"],at_risk:["At risk","معرّض للخطر"],missed:["Missed","فائت"]}
 };
 const ol=(g,v)=>O[g]&&O[g][v]?O[g][v][lang==="ar"?1:0]:(v||"—");
 const TONE={todo:"",doing:"info",blocked:"crit",done:"ok",planned:"",at_risk:"warn",missed:"crit",active:"ok",deactivated:"crit",draft:"",
- prospect:"",contacted:"",intro:"info",engaged:"info",negotiating:"warn",signed:"ok",live:"ok",yes:"ok",no:""};
+ partial:"warn",open:"warn",mitigating:"info",closed:"ok",idea:"",testing:"info",earning:"ok",prospect:"",contacted:"",intro:"info",engaged:"info",negotiating:"warn",signed:"ok",live:"ok",yes:"ok",no:""};
 const pill=(g,v)=>`<span class="pill ${TONE[v]||""}">${esc(ol(g,v))}</span>`;
 const loc=()=>lang==="ar"?"ar-u-ca-gregory-nu-latn":"en-GB";
 const nf=(n,c)=>n==null||n===""||isNaN(n)?"—":new Intl.NumberFormat(loc(),c?{notation:"compact",maximumFractionDigits:1}:{}).format(+n);
@@ -298,29 +340,41 @@ const rel=n=>{if(n==null)return"";if(n===0)return t("today");const a=Math.abs(n)
 /* ---------- schemas ---------- */
 const F=(k,type,opt,full,req)=>({k,type,opt,full,req});
 const SCHEMA={
- tasks:{n:["newTask","editTask"],f:[F("title","text",0,1,1),F("title_ar","text",0,1),F("stream","select","stream"),F("status","select","taskStatus"),F("priority","select","priority"),F("owner","text"),F("due","date"),F("note","textarea",0,1)],def:{status:"todo",priority:"med",stream:"bd"}},
+ tasks:{n:["newTask","editTask"],f:[F("title","text",0,1,1),F("title_ar","text",0,1),F("stream","select","stream"),F("status","select","taskStatus"),F("priority","select","priority"),F("phase","select","phase"),F("track","select","track"),F("initiative","select","yesno"),F("owner","text"),F("due","date"),F("note","textarea",0,1)],def:{status:"todo",priority:"med",stream:"bd",initiative:"no"}},
  partners:{n:["newPartner","editPartner"],f:[F("name","text",0,1,1),F("sector","select","sector"),F("stage","select","stage"),F("tier","select","tier"),F("contact","text"),F("next","text",0,1),F("due","date"),F("note","textarea",0,1)],def:{stage:"prospect",sector:"retail",tier:"tier2"}},
- venues:{n:["newVenue","editVenue"],f:[F("name","text",0,1,1),F("ref","text"),F("venue_id","text"),F("type","select","vtype"),F("city","text"),F("status","select","vstatus"),F("discount","select","yesno"),F("explore","select","yesno"),F("note","textarea",0,1)],def:{type:"Shop",status:"active",discount:"no",explore:"no",city:"Riyadh"}},
+ venues:{n:["newVenue","editVenue"],f:[F("name","text",0,1,1),F("name_ar","text",0,1),F("type","select","vtype"),F("status","select","vstatus"),F("vendor","text"),F("classification","text"),F("listings","number"),F("active","number"),F("cities","text",0,1),F("contact","text"),F("created","date"),F("note","textarea",0,1)],def:{type:"Shop",status:"active",listings:1,active:1}},
  milestones:{n:["newMilestone","editMilestone"],f:[F("title","text",0,1,1),F("title_ar","text",0,1),F("date","date",0,0,1),F("kind","select","mkind"),F("status","select","mstatus"),F("note","textarea",0,1)],def:{kind:"milestone",status:"planned"}},
- kpis:{n:["newMonth","editMonth"],f:[F("month","month",0,1,1),F("mau","number"),F("redemptions","number"),F("note","textarea",0,1)],def:{}},
+ kpis:{n:["newMonth","editMonth"],f:[F("month","month",0,1,1),F("users","number"),F("mau","number"),F("dau","number"),F("return_rate","number"),F("offers","number"),F("redemptions","number"),F("conversion","number"),F("revenue","number"),F("note","textarea",0,1)],def:{}},
+ risks:{n:["newRisk","editRisk"],f:[F("title","text",0,1,1),F("title_ar","text",0,1),F("status","select","rstatus"),F("owner","text"),F("note","textarea",0,1)],def:{status:"open"}},
+ revmodels:{n:["newModel","editModel"],f:[F("title","text",0,1,1),F("title_ar","text",0,1),F("status","select","rmstatus"),F("phase","select","phase"),F("note","textarea",0,1)],def:{status:"idea",phase:"p3"}},
+ plan:{n:["editStart","editStart"],f:[F("start","date",0,1,1)],def:{}},
  targets:{n:["targetsT","targetsT"],f:[F("label","text",0,1),F("mau","number"),F("redemptions","number"),F("merchants","number")],def:{}}
 };
-const LBL={title:"f_title",title_ar:"f_title_ar",stream:"f_stream",status:"f_status",priority:"f_priority",owner:"f_owner",due:"f_due",note:"f_note",name:"f_name",sector:"f_sector",stage:"f_stage",tier:"f_tier",contact:"f_contact",next:"f_next",ref:"f_ref",venue_id:"f_venue_id",type:"f_type",city:"f_city",discount:"f_discount",explore:"f_explore",date:"f_date",kind:"f_kind",month:"f_month",mau:"f_mau",redemptions:"f_redemptions",label:"f_label"};
+const LBL={title:"f_title",title_ar:"f_title_ar",stream:"f_stream",status:"f_status",priority:"f_priority",owner:"f_owner",due:"f_due",note:"f_note",name:"f_name",sector:"f_sector",stage:"f_stage",tier:"f_tier",contact:"f_contact",next:"f_next",ref:"f_ref",venue_id:"f_venue_id",type:"f_type",city:"f_city",discount:"f_discount",explore:"f_explore",date:"f_date",kind:"f_kind",month:"f_month",mau:"f_mau",redemptions:"f_redemptions",label:"f_label",phase:"f_phase",track:"f_track",initiative:"f_initiative",name_ar:"f_name_ar",classification:"f_classification",vendor:"f_vendor",cities:"f_cities",listings:"f_listings",active:"f_active",created:"f_created",users:"f_users",dau:"f_dau",return_rate:"f_return_rate",offers:"f_offers",conversion:"f_conversion",revenue:"f_revenue",start:"f_start"};
 const TLBL={mau:"f_t_mau",redemptions:"f_t_red",merchants:"f_t_merch"};
 
 /* ---------- render ---------- */
-const TABS=["overview","tasks","pipeline","venues","milestones","kpis"];
+const TABS=["overview","plan","tasks","pipeline","venues","milestones","kpis"];
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const planStart=()=>pd((S.plan&&S.plan.start)||"2026-10-04");
+const planDay=()=>Math.round((today()-planStart())/864e5);
+const PH=[["p1",0,30],["p2",30,60],["p3",60,90]];
+const curPhase=()=>{const d=planDay();return d<0?null:d<30?"p1":d<60?"p2":d<=90?"p3":null};
+const vAct=v=>+v.active||0, vAll=v=>+v.listings||0;
+const mLive=()=>S.venues.filter(v=>v.status!=="deactivated"&&v.status!=="draft").length;
+const cityList=v=>String(v.cities||"").split(/[,،]/).map(x=>x.trim()).filter(Boolean);
 function counts(){return{tasks:S.tasks.filter(x=>x.status!=="done").length,pipeline:S.partners.length,venues:S.venues.length,milestones:S.milestones.filter(m=>m.status!=="done").length,kpis:S.kpis.length}}
 function renderChrome(){
   document.documentElement.lang=lang; document.documentElement.dir=lang==="ar"?"rtl":"ltr";
   $("#h-title").textContent=t("title"); $("#h-sub").textContent=t("sub");
   $("#lang-en").setAttribute("aria-pressed",lang==="en"); $("#lang-ar").setAttribute("aria-pressed",lang==="ar");
   const c=counts();
-  $("#tabs").innerHTML=TABS.map(k=>`<a href="#${k}" data-tab="${k}" ${tab===k?'aria-current="page"':""}>${t(k)}${c[k]!=null&&k!=="overview"?`<span class="ct num">${c[k]}</span>`:""}</a>`).join("");
+  $("#tabs").innerHTML=TABS.map(k=>`<a href="#${k}" data-tab="${k}" ${tab===k?'aria-current="page"':""}>${t(k)}${c[k]!=null?`<span class="ct num">${c[k]}</span>`:""}</a>`).join("");
   const sy=$("#sync"); sy.className="sync"+(S.status==="live"?" on":S.status==="offline"?" err":"");
   $("#sync-t").textContent=t({live:"live",offline:"offline",saving:"saving",setup:"setup"}[S.status]||"connecting");$("#gh-settings").textContent=t("settings");
 }
-function render(){renderChrome();const m=$("#main");if(S.status==="setup"){m.innerHTML=vSetup();return}const fn={overview:vOverview,tasks:vTasks,pipeline:vPipeline,venues:vVenues,milestones:vMilestones,kpis:vKpis}[tab]||vOverview;m.innerHTML=(S.canWrite?"":`<div class="empty">${t("readOnly")}</div>`)+fn()}
+function render(){renderChrome();const m=$("#main");if(S.status==="setup"){m.innerHTML=vSetup();return}const fn={overview:vOverview,plan:vPlan,tasks:vTasks,pipeline:vPipeline,venues:vVenues,milestones:vMilestones,kpis:vKpis}[tab]||vOverview;m.innerHTML=(S.canWrite?"":`<div class="empty">${t("readOnly")}</div>`)+fn()}
 const addBtn=(coll,key)=>S.canWrite?`<button class="btn primary small" data-new="${coll}">+ ${t(key)}</button>`:"";
 const loadingOr=(k,html)=>!S.loaded[k]&&S.status!=="offline"?`<div class="empty">${t("loading")}</div>`:html;
 const emptyBox=(a,b)=>`<div class="empty"><b>${t(a)}</b>${t(b)}</div>`;
@@ -330,9 +384,10 @@ function vOverview(){
   const nx=ms[0];
   const done=S.tasks.filter(x=>x.status==="done").length, tot=S.tasks.length;
   const att=S.tasks.filter(x=>x.status==="blocked"||isLate(x));
-  const live=S.partners.filter(p=>p.stage==="live").length, sig=S.partners.filter(p=>p.stage==="signed").length;
+  const live=mLive(), sig=S.partners.filter(p=>p.stage==="signed").length;
   const tg=S.targets||{}; const mt=+tg.merchants||0;
-  const va=S.venues.filter(v=>v.status==="active").length, vd=S.venues.filter(v=>v.status==="deactivated").length;
+  const va=S.venues.reduce((a,v)=>a+vAct(v),0), vt=S.venues.reduce((a,v)=>a+vAll(v),0), vd=vt-va;
+  const pdN=planDay(), cp=curPhase(); const pxs=cp?S.tasks.filter(x=>x.phase===cp):[]; const pdn=pxs.filter(x=>x.status==="done").length;
   const pct=(a,b)=>b?Math.min(100,Math.round(a/b*100)):0;
   const nextHtml=nx?`<div class="next"><span class="eyebrow">${t("nextUp")}${nx.kind==="gate"?" · "+t("gate"):""}</span>
      <div class="days num">${daysTo(nx.date)}<small>${t("days")}</small></div><h3>${esc(title(nx))}</h3><span class="when">${df(nx.date,{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</span></div>`
@@ -341,12 +396,13 @@ function vOverview(){
     <div class="tile"><span class="eyebrow">${t("tasksDone")}</span><span class="v num">${done}<small> / ${tot}</small></span><div class="meter"><i style="width:${pct(done,tot)}%"></i></div></div>
     <div class="tile"><span class="eyebrow">${t("attention")}</span><span class="v num" style="color:${att.length?"var(--crit)":"var(--fg)"}">${att.length}</span><span class="d">${t("blockedOverdue")}</span></div>
     <div class="tile"><span class="eyebrow">${t("partnersLive")}</span><span class="v num">${live}${mt?`<small> / ${mt}</small>`:""}</span><span class="d">${sig} ${t("signed")}${mt?` · ${t("ofTarget")} ${nf(mt)}`:""}</span>${mt?`<div class="meter"><i style="width:${pct(live,mt)}%"></i></div>`:""}</div>
-    <div class="tile"><span class="eyebrow">${t("venuesActive")}</span><span class="v num">${va}<small> / ${S.venues.length}</small></span><span class="d" style="${vd?"color:var(--crit)":""}">${vd} ${t("deactivated")}</span></div>
+    <div class="tile"><span class="eyebrow">${t("venuesActive")}</span><span class="v num">${va}<small> / ${vt}</small></span><span class="d" style="${vd?"color:var(--crit)":""}">${vd} ${t("deactivated")}</span></div>
+    <a class="tile" href="#plan" style="text-decoration:none"><span class="eyebrow">${t("planTile")}</span><span class="v num">${pdN<0?0:Math.min(90,pdN+1)}<small> / 90</small></span><span class="d">${cp?esc(ol("phase",cp))+" · "+pdn+"/"+pxs.length:"—"}</span><div class="meter"><i style="width:${Math.max(0,Math.min(100,pdN/90*100))}%"></i></div></a>
   </div>`;
   const attList=att.length?`<ul class="alist">${att.sort((a,b)=>(a.due||"9").localeCompare(b.due||"9")).slice(0,8).map(x=>`<li>${pill("taskStatus",x.status)}<div class="t"><button class="link" data-edit="tasks" data-id="${esc(x.id)}">${esc(title(x))}</button><div class="m">${esc(ol("stream",x.stream))}${x.due?` · <span class="${isLate(x)?"due late":""}">${dShort(x.due)}</span>`:""}</div></div></li>`).join("")}</ul>`
     :`<div class="empty">${t("allClear")}</div>`;
   // also deactivated venues & at-risk milestones
-  const extra=[...S.venues.filter(v=>v.status==="deactivated").map(v=>`<li>${pill("vstatus","deactivated")}<div class="t"><button class="link" data-edit="venues" data-id="${esc(v.id)}">${esc(v.name)}</button><div class="m mono">${esc(v.ref||"")}</div></div></li>`),
+  const extra=[...S.venues.filter(v=>v.status==="deactivated"||v.status==="partial").slice(0,8).map(v=>`<li>${pill("vstatus",v.status)}<div class="t"><button class="link" data-edit="venues" data-id="${esc(v.id)}">${esc(v.name)}</button><div class="m">${esc(v.note||"")}</div></div></li>`),
     ...S.milestones.filter(m=>m.status==="at_risk").map(m=>`<li>${pill("mstatus","at_risk")}<div class="t"><button class="link" data-edit="milestones" data-id="${esc(m.id)}">${esc(title(m))}</button><div class="m">${df(m.date)}</div></div></li>`)].join("");
   const up=ms.slice(0,5).map(m=>`<li><span class="chip num">${dShort(m.date)}</span><div class="t"><button class="link" data-edit="milestones" data-id="${esc(m.id)}">${esc(title(m))}</button><div class="m">${m.kind==="gate"?t("gate")+" · ":""}${rel(daysTo(m.date))}</div></div>${pill("mstatus",m.status)}</li>`).join("");
   const streams=Object.keys(O.stream).map(s=>{const xs=S.tasks.filter(x=>x.stream===s);if(!xs.length)return"";const n=k=>xs.filter(x=>x.status===k).length;const w=k=>n(k)/xs.length*100;
@@ -355,7 +411,7 @@ function vOverview(){
   const funnel=st.map((s,i)=>`<div class="frow"><span>${esc(ol("stage",s))}</span><div><div class="fbar" style="width:${Math.max(pc[i]?4:0,pc[i]/pm*100)}%;${s==="live"||s==="signed"?"":"opacity:.55"}"></div></div><span class="num">${pc[i]}</span></div>`).join("");
   return `<section class="hero">${nextHtml}${tiles}</section>
   <section class="grid2">
-    <div class="panel"><div class="phead"><h2>${t("attentionList")}</h2></div>${loadingOr("tasks",attList)}${extra?`<ul class="alist" style="margin-top:4px;border-top:1px solid var(--line)">${extra}</ul>`:""}</div>
+    <div class="panel"><div class="phead"><h2>${t("attentionList")}</h2></div>${loadingOr("tasks",att.length||!extra?attList:"")}${extra?`<ul class="alist" style="${att.length?"margin-top:4px;border-top:1px solid var(--line)":""}">${extra}</ul>`:""}</div>
     <div class="panel"><div class="phead"><h2>${t("upcoming")}</h2><a class="btn small" href="#milestones">${t("milestones")}</a></div>${loadingOr("milestones",up?`<ul class="alist">${up}</ul>`:emptyBox("emptyMs","emptyMsD"))}</div>
   </section>
   <section class="grid2">
@@ -366,16 +422,17 @@ function vOverview(){
 
 const SORD={blocked:0,doing:1,todo:2,done:3}, PORD={high:0,med:1,low:2};
 function vTasks(){
-  let xs=S.tasks.filter(x=>(fStream==="all"||x.stream===fStream)&&(fStatus==="all"||(fStatus==="open"?x.status!=="done":x.status===fStatus)));
+  let xs=S.tasks.filter(x=>(fStream==="all"||x.stream===fStream)&&(fPhase==="all"||(fPhase==="none"?!x.phase:x.phase===fPhase))&&(fStatus==="all"||(fStatus==="open"?x.status!=="done":x.status===fStatus)));
   xs.sort((a,b)=>(SORD[a.status]-SORD[b.status])||(PORD[a.priority]??1)-(PORD[b.priority]??1)||(a.due||"9").localeCompare(b.due||"9"));
   const chips=`<div class="filters"><button class="fchip" data-fstream="all" aria-pressed="${fStream==="all"}">${t("all")}</button>${Object.keys(O.stream).map(s=>`<button class="fchip" data-fstream="${s}" aria-pressed="${fStream===s}">${esc(ol("stream",s))}</button>`).join("")}</div>`;
   const stSel=`<select class="in" id="f-status-filter" style="width:auto" aria-label="${t("f_status")}"><option value="open" ${fStatus==="open"?"selected":""}>${t("open")}</option><option value="all" ${fStatus==="all"?"selected":""}>${t("allStatus")}</option>${Object.keys(O.taskStatus).map(k=>`<option value="${k}" ${fStatus===k?"selected":""}>${ol("taskStatus",k)}</option>`).join("")}</select>`;
   const rows=xs.map(x=>`<div class="trow ${x.status==="done"?"done":""}">
      ${S.canWrite?`<select class="status ${TONE[x.status]||""}" data-quick="tasks" data-id="${esc(x.id)}" data-field="status" aria-label="${t("f_status")}">${Object.keys(O.taskStatus).map(k=>`<option value="${k}" ${x.status===k?"selected":""}>${ol("taskStatus",k)}</option>`).join("")}</select>`:pill("taskStatus",x.status)}
      <div style="min-width:0"><button class="link" data-edit="tasks" data-id="${esc(x.id)}">${esc(title(x))}</button>${x.note?`<div class="note">${esc(x.note)}</div>`:""}</div>
-     <div class="meta"><span class="prio ${x.priority||""}" title="${esc(ol("priority",x.priority))}"></span><span class="chip">${esc(ol("stream",x.stream))}</span>${x.owner?`<span class="muted">${esc(x.owner)}</span>`:""}${x.due?`<span class="num due ${isLate(x)?"late":""}">${dShort(x.due)}</span>`:""}</div>
+     <div class="meta"><span class="prio ${x.priority||""}" title="${esc(ol("priority",x.priority))}"></span>${x.phase?`<span class="chip">${esc(ol("phase",x.phase).split(" · ")[0])}</span>`:""}<span class="chip">${esc(ol("stream",x.stream))}</span>${x.owner?`<span class="muted">${esc(x.owner)}</span>`:""}${x.due?`<span class="num due ${isLate(x)?"late":""}">${dShort(x.due)}</span>`:""}</div>
    </div>`).join("");
-  return `<div class="panel"><div class="phead"><h2>${t("tasks")}</h2>${stSel}${addBtn("tasks","addTask")}</div>${chips}<div class="tlist" style="margin-top:10px">${loadingOr("tasks",rows||`<div class="empty">${S.tasks.length?t("noTasks"):t("noTasksAdd")}</div>`)}</div></div>`;
+  const phSel=`<select class="in" id="f-phase-filter" style="width:auto" aria-label="${t("f_phase")}"><option value="all">${t("allPhases")}</option>${Object.keys(O.phase).map(k=>`<option value="${k}" ${fPhase===k?"selected":""}>${ol("phase",k)}</option>`).join("")}<option value="none" ${fPhase==="none"?"selected":""}>${t("noPhase")}</option></select>`;
+  return `<div class="panel"><div class="phead"><h2>${t("tasks")}</h2>${phSel}${stSel}${addBtn("tasks","addTask")}</div>${chips}<div class="tlist" style="margin-top:10px">${loadingOr("tasks",rows||`<div class="empty">${S.tasks.length?t("noTasks"):t("noTasksAdd")}</div>`)}</div></div>`;
 }
 
 function vPipeline(){
@@ -387,16 +444,50 @@ function vPipeline(){
 }
 
 function vVenues(){
-  const vs=[...S.venues].sort((a,b)=>(a.status==="deactivated"?-1:0)-(b.status==="deactivated"?-1:0)||(a.venue_id||"").localeCompare(b.venue_id||""));
-  const a=vs.filter(v=>v.status==="active").length, d=vs.filter(v=>v.discount==="yes").length, e=vs.filter(v=>v.explore==="yes").length;
+  const ord={deactivated:0,partial:1,draft:2,active:3};
+  const all=[...S.venues].sort((a,b)=>(ord[a.status]??3)-(ord[b.status]??3)||String(a.name).localeCompare(String(b.name)));
+  const vs=all.filter(v=>fType==="all"||v.type===fType);
+  const live=mLive(), la=all.reduce((a,v)=>a+vAct(v),0), lt=all.reduce((a,v)=>a+vAll(v),0);
+  const cset=new Set(); all.forEach(v=>cityList(v).forEach(c=>cset.add(c)));
+  const onl=all.filter(v=>/affiliate/i.test(v.vendor||"")).length;
   const sum=`<div class="tiles" style="margin-bottom:14px">
-    <div class="tile"><span class="eyebrow">${t("venuesActive")}</span><span class="v num">${a}<small> / ${vs.length}</small></span></div>
-    <div class="tile"><span class="eyebrow">${t("f_discount")}</span><span class="v num">${d}<small> / ${vs.length}</small></span><div class="meter"><i style="width:${vs.length?d/vs.length*100:0}%"></i></div></div>
-    <div class="tile"><span class="eyebrow">${t("f_explore")}</span><span class="v num">${e}<small> / ${vs.length}</small></span><div class="meter"><i style="width:${vs.length?e/vs.length*100:0}%"></i></div></div></div>`;
-  const tbl=`<div class="tbl-wrap"><table><thead><tr><th>${t("f_name")}</th><th>${t("f_ref")}</th><th>${t("f_type")}</th><th>${t("f_city")}</th><th>${t("f_status")}</th><th>${t("f_discount")}</th><th>${t("f_explore")}</th></tr></thead><tbody>
-   ${vs.map(v=>`<tr><td><button class="link" data-edit="venues" data-id="${esc(v.id)}">${esc(v.name)}</button>${v.note?`<div class="muted" style="font-size:12px">${esc(v.note)}</div>`:""}</td><td class="mono">${esc(v.ref||"")}<div class="muted">${esc(v.venue_id||"")}</div></td><td>${esc(ol("vtype",v.type))}</td><td>${esc(v.city||"")}</td><td>${pill("vstatus",v.status)}</td><td>${pill("yesno",v.discount||"no")}</td><td>${pill("yesno",v.explore||"no")}</td></tr>`).join("")}
+    <div class="tile"><span class="eyebrow">${t("partnersLive")}</span><span class="v num">${live}<small> / ${all.length}</small></span><div class="meter"><i style="width:${all.length?live/all.length*100:0}%"></i></div></div>
+    <div class="tile"><span class="eyebrow">${t("listings")}</span><span class="v num">${nf(la)}<small> / ${nf(lt)}</small></span><div class="meter"><i style="width:${lt?la/lt*100:0}%"></i></div></div>
+    <div class="tile"><span class="eyebrow">${t("cities")}</span><span class="v num">${cset.size}</span><span class="d">${esc([...cset].slice(0,8).join(lang==="ar"?"، ":", "))}</span></div>
+    <div class="tile"><span class="eyebrow">${t("online")}</span><span class="v num">${onl}<small> / ${all.length}</small></span></div></div>`;
+  const types=Object.keys(O.vtype).map(k=>[k,all.filter(v=>v.type===k).length]).filter(x=>x[1]); const tm=Math.max(1,...types.map(x=>x[1]));
+  const bars=`<div class="funnel" style="margin-bottom:16px">${types.map(([k,n])=>`<div class="frow"><span>${esc(ol("vtype",k))}</span><div><div class="fbar" style="width:${n/tm*100}%"></div></div><span class="num">${n}</span></div>`).join("")}</div>`;
+  const sel=`<select class="in" id="f-type-filter" style="width:auto" aria-label="${t("f_type")}"><option value="all">${t("allTypes")}</option>${Object.keys(O.vtype).map(k=>`<option value="${k}" ${fType===k?"selected":""}>${ol("vtype",k)}</option>`).join("")}</select>`;
+  const tbl=`<div class="tbl-wrap"><table><thead><tr><th>${t("f_name")}</th><th>${t("f_type")}</th><th>${t("f_vendor")}</th><th>${t("f_cities")}</th><th>${t("f_listings")}</th><th>${t("f_status")}</th><th>${t("f_created")}</th></tr></thead><tbody>
+   ${vs.map(v=>{const cl=cityList(v);const alt=lang==="ar"?v.name:v.name_ar;const main=lang==="ar"&&v.name_ar?v.name_ar:v.name;return `<tr><td><button class="link" data-edit="venues" data-id="${esc(v.id)}">${esc(main)}</button>${alt&&alt!==main?`<div class="muted" style="font-size:12px">${esc(alt)}</div>`:""}${v.note?`<div class="muted" style="font-size:12px">${esc(v.note)}</div>`:""}</td><td>${esc(ol("vtype",v.type))}</td><td>${esc(v.vendor||v.classification||"—")}</td><td><span title="${esc(cl.join(", "))}">${cl.length>2?`<span class="num">${cl.length}</span>`:esc(cl.join(lang==="ar"?"، ":", "))}</span></td><td class="num">${vAct(v)} / ${vAll(v)}</td><td>${pill("vstatus",v.status)}</td><td class="num muted">${v.created?dShort(v.created):"—"}</td></tr>`}).join("")}
   </tbody></table></div>`;
-  return `<div class="panel"><div class="phead"><h2>${t("venues")}</h2>${addBtn("venues","addVenue")}</div>${loadingOr("venues",vs.length?sum+tbl:emptyBox("emptyVenues","emptyVenuesD"))}</div>`;
+  return `<div class="panel"><div class="phead"><h2>${t("venues")}</h2>${sel}${addBtn("venues","addVenue")}</div>${loadingOr("venues",all.length?sum+`<span class="eyebrow">${t("byType")}</span>`+bars+tbl:emptyBox("emptyVenues","emptyVenuesD"))}</div>`;
+}
+
+function vPlan(){
+  const st=planStart(), d=planDay(), cp=curPhase();
+  const head=`<div class="panel"><div class="grid2"><div><span class="eyebrow">${t("vision")}</span><p class="lead">${t("visionT")}</p></div><div><span class="eyebrow">${t("goal")}</span><p class="lead">${t("goalT")}</p></div></div></div>`;
+  const bar=`<div class="panel"><div class="phead"><h2>${t("plan90")}</h2><span class="chip num">${df(iso(st))} – ${df(iso(addD(st,90)))}</span>${S.canWrite?`<button class="btn small" data-edit="plan" data-id="plan">${t("editStart")}</button>`:""}</div>
+    <div class="pday"><span class="muted">${t("dayOf")}</span><span class="v num">${d<0?0:Math.min(90,d+1)}</span><span class="muted">${t("of90")}</span></div>
+    <div class="pbar" dir="${lang==="ar"?"rtl":"ltr"}"><i style="width:${Math.max(0,Math.min(100,d/90*100))}%"></i><b style="inset-inline-start:33.33%"></b><b style="inset-inline-start:66.66%"></b></div>
+    <div class="pbar-l">${PH.map(p=>`<span>${t(p[0]+"t")}</span>`).join("")}</div></div>`;
+  const cols=PH.map(([k,a,b])=>{const xs=S.tasks.filter(x=>x.phase===k), dn=xs.filter(x=>x.status==="done").length, ini=xs.filter(x=>x.initiative==="yes"), oth=xs.length-ini.length;
+    return `<div class="phase ${cp===k?"now":""}"><div class="ph-h"><span class="eyebrow num">${dShort(iso(addD(st,a)))} – ${dShort(iso(addD(st,b)))}</span>${cp===k?`<span class="pill ok">${t("now")}</span>`:""}</div>
+      <h3>${t(k+"t")}</h3><p class="muted" style="margin:0">${t(k+"s")}</p>
+      <div class="meter"><i style="width:${xs.length?dn/xs.length*100:0}%"></i></div><span class="muted num" style="font-size:12px">${dn} / ${xs.length} ${t("tasksDoneL")}</span>
+      <ul class="alist">${ini.map(x=>`<li>${pill("taskStatus",x.status)}<div class="t"><button class="link" data-edit="tasks" data-id="${esc(x.id)}">${esc(title(x))}</button></div></li>`).join("")}</ul>
+      ${oth?`<button class="btn small" data-gophase="${k}">+ ${oth} ${t("otherTasks")}</button>`:""}</div>`}).join("");
+  const tr=Object.keys(O.track).map(k=>{const xs=S.tasks.filter(x=>x.track===k), dn=xs.filter(x=>x.status==="done").length;
+    return `<div class="tile"><span class="eyebrow">${esc(ol("track",k))}</span><span class="v num">${dn}<small> / ${xs.length}</small></span><div class="meter"><i style="width:${xs.length?dn/xs.length*100:0}%"></i></div></div>`}).join("");
+  const qsel=(coll,g,x)=>S.canWrite?`<select class="status ${TONE[x.status]||""}" data-quick="${coll}" data-id="${esc(x.id)}" data-field="status" aria-label="${t("f_status")}">${Object.keys(O[g]).map(k=>`<option value="${k}" ${x.status===k?"selected":""}>${ol(g,k)}</option>`).join("")}</select>`:pill(g,x.status);
+  const rows=(coll,g)=>S[coll].map(x=>`<div class="rrow"><div style="min-width:0"><button class="link" data-edit="${coll}" data-id="${esc(x.id)}">${esc(title(x))}</button>${x.note||x.owner?`<div class="muted" style="font-size:12.5px">${esc([x.owner,x.note].filter(Boolean).join(" · "))}</div>`:""}</div>${qsel(coll,g,x)}</div>`).join("");
+  return head+bar+`<section class="phases">${loadingOr("tasks",cols)}</section>
+   <div class="panel"><div class="phead"><h2>${t("tracks")}</h2></div><div class="tiles">${tr}</div></div>
+   <section class="grid2">
+     <div class="panel"><div class="phead"><h2>${t("risks")}</h2>${addBtn("risks","addRisk")}</div>${rows("risks","rstatus")||`<div class="empty">—</div>`}</div>
+     <div class="panel"><div class="phead"><h2>${t("revmodels")}</h2>${addBtn("revmodels","addModel")}</div>${rows("revmodels","rmstatus")||`<div class="empty">—</div>`}</div>
+   </section>
+   <div class="panel"><div class="phead"><h2>${t("rhythm")}</h2></div><div class="rhy">${[1,2,3,4].map(i=>`<div><b>${t("rh"+i)}</b><span class="muted">${t("rh"+i+"d")}</span></div>`).join("")}</div></div>`;
 }
 
 function vMilestones(){
@@ -428,13 +519,16 @@ function chart(rows,key,target,kind){
 }
 function vKpis(){
   const rows=[...S.kpis].sort((a,b)=>(a.month||"").localeCompare(b.month||""));
-  const last=rows[rows.length-1]||{}; const tg=S.targets||{};
-  const live=S.partners.filter(p=>p.stage==="live").length; const va=S.venues.filter(v=>v.status==="active").length;
+  const tg=S.targets||{}; const has=k=>[...rows].reverse().find(r=>r[k]!=null&&r[k]!=="")||{};
+  const mo=r=>r.month?`${t("latest")}: ${df(r.month+"-01",{month:"long",year:"numeric"})}`:"—";
+  const live=mLive();
   const tile=(lbl,val,target,note)=>{const p=+target?Math.min(100,(+val||0)/+target*100):0;return `<div class="tile"><span class="eyebrow">${t(lbl)}</span><span class="v num">${nf(val)}${+target?`<small> / ${nf(target,1)}</small>`:""}</span><span class="d">${note}</span>${+target?`<div class="meter"><i style="width:${p}%"></i></div>`:""}</div>`};
-  const tiles=`<div class="tiles">${tile("mauLatest",last.mau,tg.mau,last.month?`${t("latest")}: ${df(last.month+"-01",{month:"long",year:"numeric"})}`:"—")}${tile("redLatest",last.redemptions,tg.redemptions,last.month?`${t("latest")}: ${df(last.month+"-01",{month:"long",year:"numeric"})}`:"—")}${tile("partnersLive",live,tg.merchants,t("autoNote"))}${tile("venuesActive",va,0,t("autoVenue"))}</div>`;
+  const u=has("users"), m=has("mau"), rd=has("redemptions"), rv=has("revenue");
+  const tiles=`<div class="tiles">${tile("usersTotal",u.users,0,mo(u))}${tile("mauLatest",m.mau,tg.mau,mo(m))}${tile("redLatest",rd.redemptions,tg.redemptions,mo(rd))}${tile("partnersLive",live,tg.merchants,t("autoNote"))}${tile("revenueL",rv.revenue,0,mo(rv))}</div>`;
   const head=`<div class="phead"><h2>${t("kpis")}</h2>${tg.label?`<span class="chip">${t("targetPrefix")}: ${esc(tg.label)}</span>`:""}${S.canWrite?`<button class="btn small" data-edit="targets" data-id="targets">${t("editTargets")}</button>`:""}${addBtn("kpis","addMonth")}</div>`;
-  const charts=rows.length?`<section class="grid2"><div class="panel"><div class="phead"><h2>${t("mauTrend")}</h2></div>${chart(rows,"mau",tg.mau,"line")}</div><div class="panel"><div class="phead"><h2>${t("redTrend")}</h2></div>${chart(rows,"redemptions",tg.redemptions,"bar")}</div></section>
-    <div class="panel"><div class="phead"><h2>${t("monthly")}</h2></div><div class="tbl-wrap"><table><thead><tr><th>${t("f_month")}</th><th>${t("f_mau")}</th><th>${t("f_redemptions")}</th><th>${t("f_note")}</th></tr></thead><tbody>${[...rows].reverse().map(r=>`<tr><td><button class="link" data-edit="kpis" data-id="${esc(r.id)}">${esc(df(r.month+"-01",{month:"long",year:"numeric"}))}</button></td><td class="num">${nf(r.mau)}</td><td class="num">${nf(r.redemptions)}</td><td class="muted">${esc(r.note||"")}</td></tr>`).join("")}</tbody></table></div></div>`
+  const cols=["users","mau","dau","return_rate","offers","redemptions","conversion","revenue"];
+  const charts=rows.length?`<section class="grid2"><div class="panel"><div class="phead"><h2>${t("usersTrend")}</h2></div>${chart(rows,"users",0,"line")}</div><div class="panel"><div class="phead"><h2>${t("redTrend")}</h2></div>${chart(rows,"redemptions",tg.redemptions,"bar")}</div></section>
+    <div class="panel"><div class="phead"><h2>${t("monthly")}</h2></div><div class="tbl-wrap"><table><thead><tr><th>${t("f_month")}</th>${cols.map(c=>`<th>${t("f_"+c)}</th>`).join("")}<th>${t("f_note")}</th></tr></thead><tbody>${[...rows].reverse().map(r=>`<tr><td><button class="link" data-edit="kpis" data-id="${esc(r.id)}">${esc(df(r.month+"-01",{month:"long",year:"numeric"}))}</button></td>${cols.map(c=>`<td class="num">${nf(r[c])}</td>`).join("")}<td class="muted">${esc(r.note||"")}</td></tr>`).join("")}</tbody></table></div></div>`
     :emptyBox("emptyKpi","emptyKpiD");
   return `<div class="panel">${head}${tiles}</div>${loadingOr("kpis",charts)}`;
 }
@@ -443,18 +537,18 @@ function vKpis(){
 let editing=null, delArmed=false;
 function openEditor(coll,id){
   const sc=SCHEMA[coll]; if(!sc)return;
-  const src=coll==="targets"?(S.targets||{}):id?(S[coll].find(x=>x.id===id)||{}):{...sc.def};
+  const src=coll==="targets"?(S.targets||{}):coll==="plan"?{start:iso(planStart())}:id?(S[coll].find(x=>x.id===id)||{}):{...sc.def};
   editing={coll,id,src}; delArmed=false;
   const lab=f=>t(coll==="targets"&&TLBL[f.k]?TLBL[f.k]:LBL[f.k])+(f.req?" *":"");
   const field=f=>{const v=src[f.k]??""; const id="f-"+f.k; const dis=S.canWrite?"":"disabled";
-    let inp; if(f.type==="select")inp=`<select class="in" id="${id}" ${dis}>${f.k!=="status"&&f.k!=="stage"?`<option value="">—</option>`:""}${Object.keys(O[f.opt]).map(k=>`<option value="${k}" ${v===k?"selected":""}>${esc(ol(f.opt,k))}</option>`).join("")}</select>`;
+    let inp; if(f.type==="select")inp=`<select class="in" id="${id}" ${dis}>${f.k!=="status"&&f.k!=="stage"&&f.k!=="initiative"?`<option value="">—</option>`:""}${Object.keys(O[f.opt]).map(k=>`<option value="${k}" ${v===k?"selected":""}>${esc(ol(f.opt,k))}</option>`).join("")}</select>`;
     else if(f.type==="textarea")inp=`<textarea class="in" id="${id}" ${dis}>${esc(v)}</textarea>`;
-    else inp=`<input class="in" id="${id}" type="${f.type}" value="${esc(v)}" ${f.type==="number"?'min="0" step="1" inputmode="numeric"':""} ${f.k==="title_ar"?'dir="rtl"':""} ${coll==="kpis"&&f.k==="month"&&id&&editing.id?"readonly":""} ${dis}>`;
+    else inp=`<input class="in" id="${id}" type="${f.type}" value="${esc(v)}" ${f.type==="number"?'min="0" step="any" inputmode="decimal"':""} ${f.k==="title_ar"?'dir="rtl"':""} ${coll==="kpis"&&f.k==="month"&&id&&editing.id?"readonly":""} ${dis}>`;
     return `<label class="${f.full?"full":""}" for="${id}">${lab(f)}${inp}</label>`};
   $("#modal-root").innerHTML=`<div class="scrim" data-close="1"><form class="modal" id="edit-form" role="dialog" aria-modal="true" aria-labelledby="m-title" novalidate>
     <h2 id="m-title">${t(sc.n[id?1:0])}</h2><div class="form">${sc.f.map(field).join("")}</div>
     <p class="muted" id="m-err" hidden style="color:var(--crit);margin:10px 0 0"></p>
-    <div class="mfoot"><span class="sp">${id&&coll!=="targets"&&S.canWrite?`<button type="button" class="btn danger small" id="m-del">${t("del")}</button>`:""}</span><button type="button" class="btn" data-close="1">${t("cancel")}</button>${S.canWrite?`<button type="submit" class="btn primary">${t("save")}</button>`:""}</div></form></div>`;
+    <div class="mfoot"><span class="sp">${id&&coll!=="targets"&&coll!=="plan"&&S.canWrite?`<button type="button" class="btn danger small" id="m-del">${t("del")}</button>`:""}</span><button type="button" class="btn" data-close="1">${t("cancel")}</button>${S.canWrite?`<button type="submit" class="btn primary">${t("save")}</button>`:""}</div></form></div>`;
   const first=$("#edit-form input,#edit-form select"); first&&first.focus();
 }
 function closeEditor(){$("#modal-root").innerHTML="";editing=null}
@@ -465,7 +559,7 @@ async function saveEditor(){
     if(f.type==="number")v=v===""?null:Number(v); data[f.k]=v}
   const body={...src,...data}; delete body.id; body.updated=new Date().toISOString();
   try{
-    if(coll==="targets") await S.db.doc("settings/targets").set(body);
+    if(coll==="targets"||coll==="plan") await S.db.doc("settings/"+coll).set(body);
     else if(coll==="kpis"){const mid=id||data.month; await S.db.doc("kpis/"+mid).set(body)}
     else if(id) await S.db.doc(coll+"/"+id).set(body);
     else { body.created=body.updated; await S.db.collection(coll).add(body) }
@@ -492,6 +586,8 @@ document.addEventListener("change",async e=>{
   const el=e.target;
   if(el.id==="f-status-filter"){fStatus=el.value;render();return}
   if(el.id==="f-sector-filter"){fSector=el.value;render();return}
+  if(el.id==="f-phase-filter"){fPhase=el.value;render();return}
+  if(el.id==="f-type-filter"){fType=el.value;render();return}
   if(el.dataset.quick&&S.db){try{await S.db.doc(el.dataset.quick+"/"+el.dataset.id).update({[el.dataset.field]:el.value,updated:new Date().toISOString()});toast(t("saved"))}catch(err){toast(t("saveFail"));render()}}
 });
 document.addEventListener("submit",e=>{if(e.target.id==="edit-form"){e.preventDefault();saveEditor()}});
@@ -502,7 +598,7 @@ document.addEventListener("mouseover",e=>{const r=e.target.closest("[data-tip]")
 
 /* ---------- data: a JSON file in a private GitHub repo ---------- */
 const CFGK="kfo-gh"; let cfg=null; try{cfg=JSON.parse(localStorage.getItem(CFGK)||"null")}catch(e){}
-const COLS=["tasks","partners","venues","milestones","kpis","settings"];
+const COLS=["tasks","partners","venues","milestones","kpis","risks","revmodels","settings"];
 const GH={data:null,sha:null,listeners:[],pending:[],busy:false,timer:null};
 const norm=d=>{d=d&&typeof d==="object"?d:{};COLS.forEach(c=>{if(!d[c]||typeof d[c]!=="object")d[c]={}});return d};
 const base=()=>`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`;
@@ -557,8 +653,9 @@ const db={
   }}
 };
 S.db=db;
-["tasks","partners","venues","milestones","kpis"].forEach(c=>db.collection(c).onSnapshot(snap=>{S[c]=snap.docs.map(d=>({id:d.id,...d.data()}));S.loaded[c]=true}));
+["tasks","partners","venues","milestones","kpis","risks","revmodels"].forEach(c=>db.collection(c).onSnapshot(snap=>{S[c]=snap.docs.map(d=>({id:d.id,...d.data()}));S.loaded[c]=true}));
 db.doc("settings/targets").onSnapshot(x=>{S.targets=x.exists?x.data():null});
+db.doc("settings/plan").onSnapshot(x=>{S.plan=x.exists?x.data():null});
 GH.listeners.push(()=>{if(!editing)render();else renderChrome()});
 
 let setupErr="";
@@ -602,7 +699,8 @@ document.addEventListener("submit",e=>{
 document.addEventListener("click",e=>{
   if(e.target.id==="gh-settings"){setupErr="";setStatus("setup")}
   if(e.target.id==="gh-back"){setStatus("live")}
-  if(e.target.id==="gh-forget"){cfg=null;GH.data=null;GH.sha=null;COLS.forEach(c=>{if(c!=="settings")S[c]=[]});S.targets=null;S.loaded={};try{localStorage.removeItem(CFGK)}catch(_){}setupErr="";setStatus("setup")}
+  const gp=e.target.closest("[data-gophase]"); if(gp){fPhase=gp.dataset.gophase;fStream="all";fStatus="all";location.hash="tasks"}
+  if(e.target.id==="gh-forget"){cfg=null;GH.data=null;GH.sha=null;COLS.forEach(c=>{if(c!=="settings")S[c]=[]});S.targets=null;S.plan=null;S.loaded={};try{localStorage.removeItem(CFGK)}catch(_){}setupErr="";setStatus("setup")}
 });
 window.addEventListener("focus",async()=>{
   if(S.status!=="live"||GH.busy||GH.pending.length||editing)return;
